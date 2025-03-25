@@ -1,0 +1,32 @@
+name: Sync Fork
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # 每天 UTC 00:00 运行
+  workflow_dispatch:      # 允许手动触发
+
+jobs:
+  sync-branches:
+    runs-on: ubuntu-latest
+    name: Sync branches with upstream
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync main branch
+        uses: TG908/fork-sync@v1.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: OpenManus
+          base: main
+          head: main
+
+      - name: Sync chat-visualization branch
+        uses: TG908/fork-sync@v1.1
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          owner: OpenManus
+          base: chat-visualization
+          head: chat-visualization
