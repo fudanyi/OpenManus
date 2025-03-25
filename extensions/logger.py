@@ -39,7 +39,7 @@ class Logger:
         # Create new log file if needed
         if self._current_log_file is None:
             current_date = datetime.now()
-            formatted_date = current_date.strftime("%Y%m%d%H%M%S")
+            formatted_date = current_date.strftime("%Y%m%d")
             log_name = f"{name}_{formatted_date}" if name else formatted_date
             log_path = PROJECT_ROOT / "logs"
             log_path.mkdir(exist_ok=True)
@@ -56,19 +56,3 @@ class Logger:
     def get_logger(self):
         """Get the configured logger instance"""
         return self.get_instance()._logger
-
-
-# Create a singleton instance
-logger = Logger.get_logger()
-
-if __name__ == "__main__":
-    logger.info("Starting application")
-    logger.debug("Debug message")
-    logger.warning("Warning message")
-    logger.error("Error message")
-    logger.critical("Critical message")
-
-    try:
-        raise ValueError("Test error")
-    except Exception as e:
-        logger.exception(f"An error occurred: {e}")

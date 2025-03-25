@@ -1,4 +1,6 @@
-from extensions.logger import logger
+from extensions.logger import Logger
+
+logger = Logger.get_logger()
 
 if __name__ == "__main__":
     logger.info("Starting application")
