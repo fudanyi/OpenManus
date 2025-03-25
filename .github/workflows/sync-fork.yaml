@@ -23,4 +23,4 @@ jobs:
       - name: Fetch all from upstream
         run: |
           git fetch upstream main:upstream-main
-          git fetch upstream chat-visualization:upstream-chat-visualization
+          git fetch upstream chart-visualization:upstream-chart-visualization
