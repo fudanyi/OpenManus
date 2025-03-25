@@ -1,19 +1,21 @@
 from pydantic import Field
 
 from app.agent.manus import Manus
+from app.agent.toolcall import ToolCallAgent
 from app.config import config
 from app.prompt.browser import NEXT_STEP_PROMPT as BROWSER_NEXT_STEP_PROMPT
-from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.tool import Terminate, ToolCollection
 from app.tool.bash import Bash
-from extensions.tool.data_source import DataSource
 from app.tool.file_saver import FileSaver
+from app.tool.planning import PlanningTool
 from app.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
 from app.tool.web_search import WebSearch
+from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
+from extensions.tool.data_source import DataSource
 
 
-class DataAnalyst(Manus):
+class DataAnalyst(ToolCallAgent):
     """
     A specialized data analysis agent focused on handling datasets and generating insights.
 
@@ -35,6 +37,7 @@ class DataAnalyst(Manus):
     # Add general-purpose tools to the tool collection
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(
+            PlanningTool(),
             PythonExecute(),
             WebSearch(),
             StrReplaceEditor(),

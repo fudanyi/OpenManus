@@ -5,7 +5,6 @@ from typing import Optional
 from app.exceptions import ToolError
 from app.tool.base import BaseTool, CLIResult
 
-
 _BASH_DESCRIPTION = """Execute a bash command in the terminal.
 * Long running commands: For commands that may run indefinitely, it should be run in the background and the output should be redirected to a file, e.g. command = `python3 app.py > server.log 2>&1 &`.
 * Interactive: If a bash command returns exit code `-1`, this means the process is not yet finished. The assistant must then send a second call to terminal with an empty `command` (which will retrieve any additional logs), or it can send additional text (set `command` to the text) to STDIN of the running process, or it can send command=`ctrl+c` to interrupt the process.
@@ -32,9 +31,14 @@ class _BashSession:
         if self._started:
             return
 
+        # 在 Windows 系统上不使用 os.setsid
+        preexec_fn = None
+        if os.name != "nt":  # 如果不是 Windows 系统
+            preexec_fn = os.setsid
+
         self._process = await asyncio.create_subprocess_shell(
             self.command,
-            preexec_fn=os.setsid,
+            preexec_fn=preexec_fn,
             shell=True,
             bufsize=0,
             stdin=asyncio.subprocess.PIPE,
