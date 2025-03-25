@@ -10,6 +10,7 @@ from app.tool.file_saver import FileSaver
 from app.tool.planning import PlanningTool
 from app.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
+from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
 from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
@@ -41,14 +42,16 @@ class DataAnalyst(ToolCallAgent):
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(
             Terminate(),
+            PlanningTool(),
             NormalPythonExecute(),
             DataAnalysisPythonExecute(),
-            ChartVisualization(),
+            # ChartVisualization(),
             DataSource(),
             WebSearch(),
             StrReplaceEditor(),
             FileSaver(),
             Bash(),
+            # Terminal(),
         )
     )
 

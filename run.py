@@ -16,7 +16,7 @@ async def main():
                 logger.warning("Exiting...")
                 break
 
-            logger.warning(f"Processing your request:{prompt}")
+            logger.info(f"Processing your request:{prompt}")
             await agent.run(prompt)
             logger.info("Request processing completed.")
         except KeyboardInterrupt:

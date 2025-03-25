@@ -1,15 +1,16 @@
-import subprocess
-import json
 import base64
-import pandas as pd
-import aiofiles
+import json
 import os
+import subprocess
 from typing import Any, Hashable
+
+import aiofiles
+import pandas as pd
 from pydantic import Field, model_validator
 
 from app.llm import LLM
-from app.tool.base import BaseTool
 from app.logger import logger
+from app.tool.base import BaseTool
 
 
 class ChartVisualization(BaseTool):
@@ -35,7 +36,7 @@ Note: Each tool call generates only one single chart.
                 "enum": ["png", "html"],
             },
         },
-        "required": ["code", "chart_description"],
+        "required": ["csv_path", "chart_description"],
     }
     llm: LLM = Field(default_factory=LLM, description="Language model instance")
 

@@ -33,6 +33,9 @@ setup(
         "aiofiles~=24.1.0",
         "pydantic_core>=2.27.2,<2.28.0",
         "colorama~=0.4.6",
+        "pandas~=2.2.3",
+        "matplotlib~=3.10.1",
+        "seaborn~=0.13.2",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",

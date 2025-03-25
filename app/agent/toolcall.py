@@ -3,6 +3,7 @@ from typing import Any, List, Optional, Union
 
 from pydantic import Field
 
+from app.config import config
 from app.agent.react import ReActAgent
 from app.exceptions import TokenLimitExceeded
 from app.logger import logger
@@ -20,7 +21,7 @@ class ToolCallAgent(ReActAgent):
     name: str = "toolcall"
     description: str = "an agent that can execute tool calls."
 
-    system_prompt: str = SYSTEM_PROMPT
+    system_prompt: str = SYSTEM_PROMPT.format(directory=config.workspace_root)
     next_step_prompt: str = NEXT_STEP_PROMPT
 
     available_tools: ToolCollection = ToolCollection(

@@ -15,15 +15,11 @@ class Logger:
             self._print_level = "INFO"
             self._logfile_level = "DEBUG"
             self._current_log_file = None
+            self._logger = loguru_logger
             self._initialize_logger()
             Logger._initialized = True
 
-    def _initialize_logger(self):
-        """Initialize logger with default settings"""
-        self._logger = loguru_logger
-        self._define_log_level()
-
-    def _define_log_level(
+    def _initialize_logger(
         self, print_level="INFO", logfile_level="DEBUG", name: str = None
     ):
         """Adjust the log level and create a new log file if needed"""
