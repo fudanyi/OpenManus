@@ -22,7 +22,7 @@ Note: Each tool call generates only one single chart.
         "properties": {
             "csv_path": {
                 "type": "string",
-                "description": """file path of csv data with ".csv" in the end""",
+                "description": """absolute file path of csv data with ".csv" in the end""",
             },
             "chart_description": {
                 "type": "string",
@@ -31,7 +31,7 @@ Note: Each tool call generates only one single chart.
             "output_type": {
                 "description": "Rendering format (html=interactive)",
                 "type": "string",
-                "default": "html",
+                "default": "png",
                 "enum": ["png", "html"],
             },
         },
@@ -47,7 +47,7 @@ Note: Each tool call generates only one single chart.
         return self
 
     async def execute(
-        self, csv_path: str, chart_description: str, output_type: str
+        self, csv_path: str, chart_description: str, output_type: str = "png"
     ) -> str:
         logger.info(
             f"📈 Chart Generation with data and description: {chart_description} with {csv_path} "
