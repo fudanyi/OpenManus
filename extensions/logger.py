@@ -1,4 +1,3 @@
-import sys
 from datetime import datetime
 from loguru import logger as loguru_logger
 
@@ -30,7 +29,7 @@ class Logger:
         self._logger.remove()
 
         # Add console handler
-        self._logger.add(sys.stderr, level=print_level)
+        # self._logger.add(sys.stderr, level=print_level)
 
         # Create new log file if needed
         if self._current_log_file is None:

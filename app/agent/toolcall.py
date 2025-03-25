@@ -10,6 +10,7 @@ from app.logger import logger
 from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.schema import TOOL_CHOICE_TYPE, AgentState, Message, ToolCall, ToolChoice
 from app.tool import CreateChatCompletion, Terminate, ToolCollection
+from extensions.output import Output
 
 
 TOOL_CALL_REQUIRED = "Tool calls required but none provided"
@@ -79,6 +80,13 @@ class ToolCallAgent(ReActAgent):
 
         # Log response info
         logger.info(f"✨ {self.name}'s thoughts: {content}")
+
+        Output.print(
+            type="tool_call_think",
+            text=f"✨ {self.name}'s thoughts: {content}",
+            data={"content": content},
+        )
+
         logger.info(
             f"🛠️ {self.name} selected {len(tool_calls) if tool_calls else 0} tools to use"
         )
@@ -87,6 +95,19 @@ class ToolCallAgent(ReActAgent):
                 f"🧰 Tools being prepared: {[call.function.name for call in tool_calls]}"
             )
             logger.info(f"🔧 Tool arguments: {tool_calls[0].function.arguments}")
+
+            Output.print(
+                type="tool_call_tools",
+                text=f"🧰 Tools being prepared: {[call.function.name for call in tool_calls]}",
+                data=[
+                    {
+                        "tool_call_id": call.id,
+                        "tool_call_name": call.function.name,
+                        "tool_call_arguments": call.function.arguments,
+                    }
+                    for call in tool_calls
+                ],
+            )
 
         try:
             if response is None:
@@ -151,6 +172,16 @@ class ToolCallAgent(ReActAgent):
                 f"🎯 Tool '{command.function.name}' completed its mission! Result: {result}"
             )
 
+            Output.print(
+                type="tool_call_execute",
+                text=f"🎯 Tool '{command.function.name}' completed its mission! Result: {result}",
+                data={
+                    "tool_call_id": command.id,
+                    "tool_call_name": command.function.name,
+                    "result": result,
+                },
+            )
+
             # Add tool response to memory
             tool_msg = Message.tool_message(
                 content=result,
@@ -178,6 +209,17 @@ class ToolCallAgent(ReActAgent):
 
             # Execute the tool
             logger.info(f"🔧 Activating tool: '{name}'...")
+
+            Output.print(
+                type="tool_call_execute",
+                text=f"🔧 Activating tool: '{name}'...",
+                data={
+                    "tool_call_id": command.id,
+                    "tool_call_name": name,
+                    "result": "starting",
+                },
+            )
+
             result = await self.available_tools.execute(name=name, tool_input=args)
 
             # Handle special tools
@@ -223,6 +265,16 @@ class ToolCallAgent(ReActAgent):
         if self._should_finish_execution(name=name, result=result, **kwargs):
             # Set agent state to finished
             logger.info(f"🏁 Special tool '{name}' has completed the task!")
+
+            Output.print(
+                type="tool_call_finish",
+                text=f"🏁 Special tool '{name}' has completed the task!",
+                data={
+                    "tool_call_name": name,
+                    "result": result,
+                },
+            )
+
             self.state = AgentState.FINISHED
 
     @staticmethod

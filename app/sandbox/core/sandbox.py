@@ -436,7 +436,7 @@ class DockerSandbox:
 
             if self.container:
                 try:
-                    await asyncio.to_thread(self.container.stop, timeout=5)
+                    await asyncio.to_thread(self.container.stop, timeout=60)
                 except Exception as e:
                     errors.append(f"Container stop error: {e}")
 

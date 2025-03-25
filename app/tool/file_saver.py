@@ -4,6 +4,7 @@ import aiofiles
 
 from app.config import WORKSPACE_ROOT
 from app.tool.base import BaseTool
+from extensions.output import Output
 
 
 class FileSaver(BaseTool):
@@ -61,6 +62,12 @@ The tool accepts content and a file path, and saves the content to that location
             # Write directly to the file
             async with aiofiles.open(full_path, mode, encoding="utf-8") as file:
                 await file.write(content)
+
+            Output.print(
+                type="file_saver",
+                text=f"Content successfully saved to {full_path}",
+                data={"file_path": full_path},
+            )
 
             return f"Content successfully saved to {full_path}"
         except Exception as e:

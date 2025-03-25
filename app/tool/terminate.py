@@ -1,5 +1,6 @@
 from app.logger import logger
 from app.tool.base import BaseTool
+from extensions.output import Output
 
 _TERMINATE_DESCRIPTION = """Terminate the interaction when the request is met OR if the assistant cannot proceed further with the task.
 When you have finished all the tasks, make sure to call this tool to end the work."""
@@ -24,6 +25,13 @@ class Terminate(BaseTool):
         """Finish the current execution"""
         try:
             logger.info(f"Terminating interaction with status: {status}")
+
+            Output.print(
+                type="terminate",
+                text=f"Terminating interaction with status: {status}",
+                data={"status": status},
+            )
+
             return f"The interaction has been completed with status: {status}"
         except Exception as e:
             logger.error(f"Error during termination: {e}")

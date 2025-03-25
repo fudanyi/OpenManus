@@ -166,7 +166,7 @@ Note: You MUST append a `sleep 0.05` to the end of the command for commands that
             if self.process:
                 self.process.terminate()
                 try:
-                    await asyncio.wait_for(self.process.wait(), timeout=5)
+                    await asyncio.wait_for(self.process.wait(), timeout=60)
                 except asyncio.TimeoutError:
                     self.process.kill()
                     await self.process.wait()

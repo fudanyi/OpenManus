@@ -4,6 +4,7 @@ from typing import Optional
 
 from app.exceptions import ToolError
 from app.tool.base import BaseTool, CLIResult
+from extensions.output import Output
 
 _BASH_DESCRIPTION = """Execute a bash command in the terminal.
 * Long running commands: For commands that may run indefinitely, it should be run in the background and the output should be redirected to a file, e.g. command = `python3 app.py > server.log 2>&1 &`.
@@ -109,6 +110,16 @@ class _BashSession:
         )  # pyright: ignore[reportAttributeAccessIssue]
         if error.endswith("\n"):
             error = error[:-1]
+
+        Output.print(
+            type="bash_run",
+            text=f"Bash command output: {output}",
+            data={
+                "command": command,
+                "output": output,
+                "error": error,
+            },
+        )
 
         # clear the buffers so that the next output can be read correctly
         self._process.stdout._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]

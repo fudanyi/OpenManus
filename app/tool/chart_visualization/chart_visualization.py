@@ -11,7 +11,7 @@ from pydantic import Field, model_validator
 from app.llm import LLM
 from app.logger import logger
 from app.tool.base import BaseTool
-
+from extensions.output import Output
 
 class ChartVisualization(BaseTool):
     name: str = "generate_data_visualization"
@@ -53,6 +53,7 @@ Note: Each tool call generates only one single chart.
         logger.info(
             f"📈 Chart Generation with data and description: {chart_description} with {csv_path} "
         )
+
         try:
             df = pd.read_csv(csv_path)
             df = df.astype(object)
@@ -80,8 +81,25 @@ Note: Each tool call generates only one single chart.
                     chart_file_path, "w", encoding="utf-8"
                 ) as file:
                     await file.write(result["res"])
+
+            Output.print(
+                type="chart_visualization",
+                text=f"📈 Chart Generation with data and description: {chart_description} with {csv_path}",
+                data={
+                    "chart_description": chart_description,
+                    "csv_path": csv_path,
+                    "chart_file_path": chart_file_path,
+                },
+            )
+
             return {"observation": f"chart successfully saved to {chart_file_path}"}
         except Exception as e:
+            Output.print(
+                type="chart_visualization_error",
+                text=f"Error: {e}",
+                data={"error": e},
+            )
+
             return {
                 "observation": f"Error: {e}",
                 "success": False,

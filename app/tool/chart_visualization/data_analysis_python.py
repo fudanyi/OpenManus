@@ -27,7 +27,7 @@ class DataAnalysisPythonExecute(NormalPythonExecute):
         "required": ["code"],
     }
 
-    async def execute(self, code: str, analysis_content: str, timeout=5):
+    async def execute(self, code: str, analysis_content: str, timeout=60):
         """
         Executes the provided Python code with a timeout.
 

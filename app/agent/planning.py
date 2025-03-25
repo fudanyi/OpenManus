@@ -8,6 +8,7 @@ from app.logger import logger
 from app.prompt.planning import NEXT_STEP_PROMPT, PLANNING_SYSTEM_PROMPT
 from app.schema import TOOL_CHOICE_TYPE, Message, ToolCall, ToolChoice
 from app.tool import PlanningTool, Terminate, ToolCollection
+from extensions.output import Output
 
 
 class PlanningAgent(ToolCallAgent):
@@ -152,6 +153,16 @@ class PlanningAgent(ToolCallAgent):
             logger.info(
                 f"Marked step {step_index} as completed in plan {self.active_plan_id}"
             )
+
+            Output.print(
+                type="planning_update_status",
+                text=f"Marked step {step_index} as completed in plan {self.active_plan_id}",
+                data={
+                    "step_index": step_index,
+                    "plan_id": self.active_plan_id,
+                    "status": "completed",
+                },
+            )
         except Exception as e:
             logger.warning(f"Failed to update plan status: {e}")
 
@@ -202,6 +213,14 @@ class PlanningAgent(ToolCallAgent):
         """Create an initial plan based on the request."""
         logger.info(f"Creating initial plan with ID: {self.active_plan_id}")
 
+        Output.print(
+            type="planning_create_plan",
+            text=f"Creating initial plan with ID: {self.active_plan_id}",
+            data={
+                "plan_id": self.active_plan_id,
+            },
+        )
+
         messages = [
             Message.user_message(
                 f"Analyze the request and create a plan with ID {self.active_plan_id}: {request}"
@@ -226,6 +245,16 @@ class PlanningAgent(ToolCallAgent):
                 result = await self.execute_tool(tool_call)
                 logger.info(
                     f"Executed tool {tool_call.function.name} with result: {result}"
+                )
+
+                Output.print(
+                    type="planning_execute_tool",
+                    text=f"Executed tool {tool_call.function.name} with result: {result}",
+                    data={
+                        "tool_call_id": tool_call.id,
+                        "tool_call_name": tool_call.function.name,
+                        "result": result,
+                    },
                 )
 
                 # Add tool response to memory

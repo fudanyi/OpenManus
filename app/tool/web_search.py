@@ -13,6 +13,7 @@ from app.tool.search import (
     GoogleSearchEngine,
     WebSearchEngine,
 )
+from extensions.output import Output
 
 
 class WebSearch(BaseTool):
@@ -102,6 +103,13 @@ class WebSearch(BaseTool):
             engine = self._search_engine[engine_name]
             try:
                 logger.info(f"🔎 Attempting search with {engine_name.capitalize()}...")
+
+                Output.print(
+                    type="web_search",
+                    text=f"🔎 Attempting search with {engine_name.capitalize()}...",
+                    data={"engine_name": engine_name},
+                )
+
                 links = await self._perform_search_with_engine(
                     engine, query, num_results
                 )
@@ -109,6 +117,12 @@ class WebSearch(BaseTool):
                     if failed_engines:
                         logger.info(
                             f"Search successful with {engine_name.capitalize()} after trying: {', '.join(failed_engines)}"
+                        )
+
+                        Output.print(
+                            type="web_search",
+                            text=f"Search successful with {engine_name.capitalize()} after trying: {', '.join(failed_engines)}",
+                            data={"engine_name": engine_name},
                         )
                     return links
             except Exception as e:

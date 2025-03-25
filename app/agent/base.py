@@ -9,6 +9,8 @@ from app.logger import logger
 from app.sandbox.client import SANDBOX_CLIENT
 from app.schema import ROLE_TYPE, AgentState, Memory, Message
 
+from extensions.output import Output
+
 
 class BaseAgent(BaseModel, ABC):
     """Abstract base class for managing agent state and execution.
@@ -138,6 +140,16 @@ class BaseAgent(BaseModel, ABC):
             ):
                 self.current_step += 1
                 logger.info(f"Executing step {self.current_step}/{self.max_steps}")
+
+                Output.print(
+                    type="agent_run",
+                    text=f"Executing step {self.current_step}/{self.max_steps}",
+                    data={
+                        "current_step": self.current_step,
+                        "max_steps": self.max_steps,
+                    },
+                )
+
                 step_result = await self.step()
 
                 # Check for stuck state

@@ -7,6 +7,7 @@ from app.llm import LLM
 from app.logger import logger
 from app.prompt.cot import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.schema import AgentState, Message
+from extensions.output import Output
 
 
 class CoTAgent(BaseAgent):
@@ -26,6 +27,11 @@ class CoTAgent(BaseAgent):
         """Execute one step of chain of thought reasoning"""
         logger.info(f"🧠 {self.name} is thinking...")
 
+        Output.print(
+            type="cot_step",
+            text=f"🧠 {self.name} is thinking...",
+        )
+
         # If next_step_prompt exists and this isn't the first message, add it to user messages
         if self.next_step_prompt and len(self.messages) > 1:
             self.memory.add_message(Message.user_message(self.next_step_prompt))
@@ -33,9 +39,11 @@ class CoTAgent(BaseAgent):
         # Use system prompt and user messages
         response = await self.llm.ask(
             messages=self.messages,
-            system_msgs=[Message.system_message(self.system_prompt)]
-            if self.system_prompt
-            else None,
+            system_msgs=(
+                [Message.system_message(self.system_prompt)]
+                if self.system_prompt
+                else None
+            ),
         )
 
         # Record assistant's response
