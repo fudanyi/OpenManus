@@ -8,7 +8,7 @@ from typing import Dict, List, Optional
 from app.tool.base import BaseTool
 from extensions.tool.datatable_client.trino_client import TrinoDataTableClient
 
-sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../")))
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../workspace")))
 
 
 class DataSource(BaseTool):
