@@ -13,7 +13,7 @@ async def main():
                 logger.warning("Empty prompt provided.")
                 continue
             if prompt == "exit":
-                logger.warning("Exiting...")
+                logger.info("Exiting...")
                 break
 
             logger.info(f"Processing your request:{prompt}")
