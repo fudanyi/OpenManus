@@ -12,6 +12,7 @@ from app.logger import logger
 from app.schema import AgentState, Message, ToolChoice
 from app.tool import PlanningTool
 from extensions.output import Output
+from extensions.tool.human_input import HumanInput
 
 
 class PlanStepStatus(str, Enum):
@@ -48,6 +49,7 @@ class PlanningFlow(BaseFlow):
 
     llm: LLM = Field(default_factory=lambda: LLM())
     planning_tool: PlanningTool = Field(default_factory=PlanningTool)
+    humaninput_tool: HumanInput = Field(default_factory=HumanInput)
     executor_keys: List[str] = Field(default_factory=list)
     active_plan_id: str = Field(default_factory=lambda: f"plan_{int(time.time())}")
     current_step_index: Optional[int] = None
@@ -121,7 +123,7 @@ class PlanningFlow(BaseFlow):
 
                 Output.print(
                     type="liveStatus",
-                    text=f"Executing plan {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
+                    text=f"Executing plan step {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
                 )
 
                 # Execute current step with appropriate agent
@@ -132,12 +134,17 @@ class PlanningFlow(BaseFlow):
 
                 Output.print(
                     type="liveStatus",
-                    text=f"Completed plan {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
+                    text=f"Completed plan step {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
                 )
 
                 # Check if agent wants to terminate
                 if hasattr(executor, "state") and executor.state == AgentState.FINISHED:
                     break
+
+            Output.print(
+                type="liveStatus",
+                text="Plan completed",
+            )
 
             return result
         except Exception as e:

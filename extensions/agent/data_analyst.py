@@ -4,17 +4,21 @@ from app.agent.toolcall import ToolCallAgent
 from app.config import config
 from app.tool import Terminate, ToolCollection
 from app.tool.bash import Bash
+
 # from app.tool.chart_visualization.chart_visualization import ChartVisualization
 from app.tool.chart_visualization.data_analysis_python import DataAnalysisPythonExecute
 from app.tool.chart_visualization.normal_python_execute import NormalPythonExecute
 from app.tool.file_saver import FileSaver
+
 # from app.tool.planning import PlanningTool
 # from app.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
+
 # from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
 from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
+from extensions.tool.human_input import HumanInput
 
 
 class DataAnalyst(ToolCallAgent):
@@ -40,6 +44,7 @@ class DataAnalyst(ToolCallAgent):
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(
             Terminate(),
+            HumanInput(),
             # PlanningTool(),
             NormalPythonExecute(),
             DataAnalysisPythonExecute(),
