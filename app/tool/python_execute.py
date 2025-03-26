@@ -3,6 +3,7 @@ import sys
 from io import StringIO
 from typing import Dict
 
+from app.prompt import table
 from app.tool.base import BaseTool
 
 
@@ -10,7 +11,11 @@ class PythonExecute(BaseTool):
     """A tool for executing Python code with timeout and safety restrictions."""
 
     name: str = "python_execute"
-    description: str = "Executes Python code string. Note: Only print outputs are visible, function return values are not captured. Use print statements to see results."
+    description: str = (
+        "Executes Python code string. Note: Only print outputs are visible, function return values are not captured. Use print statements to see results.\n"
+        + table.PROMPT
+    )
+
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -18,8 +23,15 @@ class PythonExecute(BaseTool):
                 "type": "string",
                 "description": "The Python code to execute.",
             },
+            "output_files": {
+                "type": "array",
+                "description": "The files to output.",
+                "items": {
+                    "type": "string",
+                },
+            },
         },
-        "required": ["code"],
+        "required": ["code", "output_files"],
     }
 
     def _run_code(self, code: str, result_dict: dict, safe_globals: dict) -> None:
@@ -39,7 +51,8 @@ class PythonExecute(BaseTool):
     async def execute(
         self,
         code: str,
-        timeout: int = 60,
+        output_files: list,
+        timeout: int = 150,
     ) -> Dict:
         """
         Executes the provided Python code with a timeout.
@@ -47,13 +60,15 @@ class PythonExecute(BaseTool):
         Args:
             code (str): The Python code to execute.
             timeout (int): Execution timeout in seconds.
-
+            output_files (list): The files to output.
         Returns:
             Dict: Contains 'output' with execution output or error message and 'success' status.
         """
 
         with multiprocessing.Manager() as manager:
-            result = manager.dict({"observation": "", "success": False})
+            result = manager.dict(
+                {"observation": "", "success": False, "output_files": []}
+            )
             if isinstance(__builtins__, dict):
                 safe_globals = {"__builtins__": __builtins__}
             else:
@@ -71,5 +86,6 @@ class PythonExecute(BaseTool):
                 return {
                     "observation": f"Execution timeout after {timeout} seconds",
                     "success": False,
+                    "output_files": output_files,
                 }
             return dict(result)
