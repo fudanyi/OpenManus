@@ -105,9 +105,14 @@ class WebSearch(BaseTool):
                 logger.info(f"🔎 Attempting search with {engine_name.capitalize()}...")
 
                 Output.print(
-                    type="web_search",
+                    type="webSearch",
                     text=f"🔎 Attempting search with {engine_name.capitalize()}...",
-                    data={"engine_name": engine_name},
+                    data={
+                        "status": "in_progress",
+                        "engineName": engine_name,
+                        "query": query,
+                        "numResults": num_results,
+                    },
                 )
 
                 links = await self._perform_search_with_engine(
@@ -119,11 +124,18 @@ class WebSearch(BaseTool):
                             f"Search successful with {engine_name.capitalize()} after trying: {', '.join(failed_engines)}"
                         )
 
-                        Output.print(
-                            type="web_search",
-                            text=f"Search successful with {engine_name.capitalize()} after trying: {', '.join(failed_engines)}",
-                            data={"engine_name": engine_name},
-                        )
+                    Output.print(
+                        type="webSearch",
+                        text=f"Search successful with {engine_name.capitalize()}",
+                        data={
+                            "status": "success",
+                            "engineName": engine_name,
+                            "query": query,
+                            "numResults": num_results,
+                            "links": links,
+                        },
+                    )
+
                     return links
             except Exception as e:
                 failed_engines.append(engine_name.capitalize())
@@ -133,13 +145,49 @@ class WebSearch(BaseTool):
                     logger.warning(
                         f"⚠️ {engine_name.capitalize()} search engine rate limit exceeded, trying next engine..."
                     )
+
+                    Output.print(
+                        type="webSearch",
+                        text=f"⚠️ {engine_name.capitalize()} search engine rate limit exceeded, trying next engine...",
+                        data={
+                            "status": "error",
+                            "engineName": engine_name,
+                            "query": query,
+                            "numResults": num_results,
+                            "error": str(e),
+                        },
+                    )
                 else:
                     logger.warning(
                         f"⚠️ {engine_name.capitalize()} search failed with error: {e}"
                     )
 
+                    Output.print(
+                        type="webSearch",
+                        text=f"⚠️ {engine_name.capitalize()} search failed with error: {e}",
+                        data={
+                            "status": "error",
+                            "engineName": engine_name,
+                            "query": query,
+                            "numResults": num_results,
+                            "error": str(e),
+                        },
+                    )
+
         if failed_engines:
             logger.error(f"All search engines failed: {', '.join(failed_engines)}")
+
+            Output.print(
+                type="webSearch",
+                text=f"All search engines failed: {', '.join(failed_engines)}",
+                data={
+                    "status": "error",
+                    "engineName": ", ".join(failed_engines),
+                    "query": query,
+                    "numResults": num_results,
+                    "error": f"All search engines failed: {', '.join(failed_engines)}",
+                },
+            )
         return []
 
     def _get_engine_order(self) -> List[str]:

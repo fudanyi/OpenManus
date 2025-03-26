@@ -112,7 +112,7 @@ class _BashSession:
             error = error[:-1]
 
         Output.print(
-            type="bash_run",
+            type="bash",
             text=f"Bash command output: {output}",
             data={
                 "command": command,

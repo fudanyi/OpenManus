@@ -155,11 +155,11 @@ class PlanningAgent(ToolCallAgent):
             )
 
             Output.print(
-                type="planning_update_status",
+                type="updatePlan",
                 text=f"Marked step {step_index} as completed in plan {self.active_plan_id}",
                 data={
-                    "step_index": step_index,
-                    "plan_id": self.active_plan_id,
+                    "stepIndex": step_index,
+                    "planId": self.active_plan_id,
                     "status": "completed",
                 },
             )
@@ -190,8 +190,19 @@ class PlanningAgent(ToolCallAgent):
                 return None
 
             # Find the first non-completed step
-            for i, line in enumerate(plan_lines[steps_index + 1 :], start=0):
+            for i, line in enumerate(plan_lines[steps_index + 1:], start=0):
                 if "[ ]" in line or "[→]" in line:  # not_started or in_progress
+
+                    Output.print(
+                        type="executePlan",
+                        text=f"Executed plan {self.active_plan_id} step {i}",
+                        data={
+                            "stepIndex": i,
+                            "planId": self.active_plan_id,
+                            "status": "in_progress",
+                        },
+                    )
+
                     # Mark current step as in_progress
                     await self.available_tools.execute(
                         name="planning",
@@ -202,6 +213,17 @@ class PlanningAgent(ToolCallAgent):
                             "step_status": "in_progress",
                         },
                     )
+
+                    Output.print(
+                        type="executePlan",
+                        text=f"Executed plan {self.active_plan_id} step {i}",
+                        data={
+                            "stepIndex": i,
+                            "planId": self.active_plan_id,
+                            "status": "completed",
+                        },
+                    )
+
                     return i
 
             return None  # No active step found
@@ -212,14 +234,6 @@ class PlanningAgent(ToolCallAgent):
     async def create_initial_plan(self, request: str) -> None:
         """Create an initial plan based on the request."""
         logger.info(f"Creating initial plan with ID: {self.active_plan_id}")
-
-        Output.print(
-            type="planning_create_plan",
-            text=f"Creating initial plan with ID: {self.active_plan_id}",
-            data={
-                "plan_id": self.active_plan_id,
-            },
-        )
 
         messages = [
             Message.user_message(
@@ -247,16 +261,6 @@ class PlanningAgent(ToolCallAgent):
                     f"Executed tool {tool_call.function.name} with result: {result}"
                 )
 
-                Output.print(
-                    type="planning_execute_tool",
-                    text=f"Executed tool {tool_call.function.name} with result: {result}",
-                    data={
-                        "tool_call_id": tool_call.id,
-                        "tool_call_name": tool_call.function.name,
-                        "result": result,
-                    },
-                )
-
                 # Add tool response to memory
                 tool_msg = Message.tool_message(
                     content=result,
@@ -267,8 +271,27 @@ class PlanningAgent(ToolCallAgent):
                 plan_created = True
                 break
 
-        if not plan_created:
+        if plan_created:
+            Output.print(
+                type="createPlan",
+                text=f"Created initial plan {self.active_plan_id}",
+                data={
+                    "stepIndex": 0,
+                    "planId": self.active_plan_id,
+                    "status": "created",
+                },
+            )
+        else:
             logger.warning("No plan created from initial request")
+
+            Output.print(
+                type="createPlan",
+                text="Error: Parameter `plan_id` is required for command: create",
+                data={
+                    "status": "error",
+                },
+            )
+
             tool_msg = Message.assistant_message(
                 "Error: Parameter `plan_id` is required for command: create"
             )

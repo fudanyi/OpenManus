@@ -41,7 +41,11 @@ class Output:
         log_path = PROJECT_ROOT / "logs"
         log_path.mkdir(exist_ok=True)
         with open(log_path / f"{formatted_date}.output", "a", encoding="utf-8") as f:
-            f.write(json.dumps(output, ensure_ascii=True, indent=4) + ",\n")
+            try:
+                f.write(json.dumps(output, ensure_ascii=False, indent=4) + ",\n")
+            except Exception as e:
+                # logger.error(f"Error writing to output file: {e}")
+                pass
 
     @classmethod
     def _pack(self, type: str, text: str, data: dict = None):

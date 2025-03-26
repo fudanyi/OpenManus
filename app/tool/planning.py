@@ -3,6 +3,7 @@ from typing import Dict, List, Literal, Optional
 
 from app.exceptions import ToolError
 from app.tool.base import BaseTool, ToolResult
+from extensions.output import Output
 
 
 _PLANNING_TOOL_DESCRIPTION = """
@@ -150,6 +151,12 @@ class PlanningTool(BaseTool):
             "step_notes": [""] * len(steps),
         }
 
+        Output.print(
+            type="createPlan",
+            text=f"Plan {plan_id} created",
+            data=plan,
+        )
+
         self.plans[plan_id] = plan
         self._current_plan_id = plan_id  # Set as active plan
 
@@ -202,6 +209,12 @@ class PlanningTool(BaseTool):
             plan["step_statuses"] = new_statuses
             plan["step_notes"] = new_notes
 
+        Output.print(
+            type="updatePlan",
+            text=f"Plan {plan_id} updated",
+            data=plan,
+        )
+
         return ToolResult(
             output=f"Plan updated successfully: {plan_id}\n\n{self._format_plan(plan)}"
         )
@@ -223,6 +236,12 @@ class PlanningTool(BaseTool):
             progress = f"{completed}/{total} steps completed"
             output += f"• {plan_id}{current_marker}: {plan['title']} - {progress}\n"
 
+        Output.print(
+            type="listPlans",
+            text=f"{output}",
+            data=self.plans,
+        )
+
         return ToolResult(output=output)
 
     def _get_plan(self, plan_id: Optional[str]) -> ToolResult:
@@ -239,6 +258,13 @@ class PlanningTool(BaseTool):
             raise ToolError(f"No plan found with ID: {plan_id}")
 
         plan = self.plans[plan_id]
+
+        Output.print(
+            type="getPlan",
+            text=f"Plan {plan_id} details",
+            data=plan,
+        )
+
         return ToolResult(output=self._format_plan(plan))
 
     def _set_active_plan(self, plan_id: Optional[str]) -> ToolResult:
@@ -250,6 +276,13 @@ class PlanningTool(BaseTool):
             raise ToolError(f"No plan found with ID: {plan_id}")
 
         self._current_plan_id = plan_id
+
+        Output.print(
+            type="setActivePlan",
+            text=f"Plan {plan_id} set as active",
+            data=self.plans[plan_id],
+        )
+
         return ToolResult(
             output=f"Plan '{plan_id}' is now the active plan.\n\n{self._format_plan(self.plans[plan_id])}"
         )
@@ -299,6 +332,12 @@ class PlanningTool(BaseTool):
         if step_notes:
             plan["step_notes"][step_index] = step_notes
 
+        Output.print(
+            type="markPlanStep",
+            text=f"Step {step_index} updated in plan '{plan_id}'",
+            data=plan,
+        )
+
         return ToolResult(
             output=f"Step {step_index} updated in plan '{plan_id}'.\n\n{self._format_plan(plan)}"
         )
@@ -316,6 +355,12 @@ class PlanningTool(BaseTool):
         # If the deleted plan was the active plan, clear the active plan
         if self._current_plan_id == plan_id:
             self._current_plan_id = None
+
+        Output.print(
+            type="deletePlan",
+            text=f"Plan '{plan_id}' has been deleted.",
+            data=self.plans,
+        )
 
         return ToolResult(output=f"Plan '{plan_id}' has been deleted.")
 

@@ -11,6 +11,7 @@ from app.llm import LLM
 from app.logger import logger
 from app.schema import AgentState, Message, ToolChoice
 from app.tool import PlanningTool
+from extensions.output import Output
 
 
 class PlanStepStatus(str, Enum):
@@ -118,11 +119,21 @@ class PlanningFlow(BaseFlow):
                     result += await self._finalize_plan()
                     break
 
+                Output.print(
+                    type="liveStatus",
+                    text=f"Executing plan {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
+                )
+
                 # Execute current step with appropriate agent
                 step_type = step_info.get("type") if step_info else None
                 executor = self.get_executor(step_type)
                 step_result = await self._execute_step(executor, step_info)
                 result += step_result + "\n"
+
+                Output.print(
+                    type="liveStatus",
+                    text=f"Completed plan {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
+                )
 
                 # Check if agent wants to terminate
                 if hasattr(executor, "state") and executor.state == AgentState.FINISHED:
@@ -147,6 +158,11 @@ class PlanningFlow(BaseFlow):
         # Create a user message with the request
         user_message = Message.user_message(
             f"Create a reasonable plan with clear steps to accomplish the task: {request}"
+        )
+
+        Output.print(
+            type="liveStatus",
+            text="Planning",
         )
 
         # Call LLM with PlanningTool
@@ -175,6 +191,11 @@ class PlanningFlow(BaseFlow):
 
                     # Execute the tool via ToolCollection instead of directly
                     result = await self.planning_tool.execute(**args)
+
+                    Output.print(
+                        type="liveStatus",
+                        text=f"Plan {self.active_plan_id} created",
+                    )
 
                     logger.info(f"Plan creation result: {str(result)}")
                     return

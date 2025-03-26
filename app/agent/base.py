@@ -142,11 +142,11 @@ class BaseAgent(BaseModel, ABC):
                 logger.info(f"Executing step {self.current_step}/{self.max_steps}")
 
                 Output.print(
-                    type="agent_run",
+                    type="agentStep",
                     text=f"Executing step {self.current_step}/{self.max_steps}",
                     data={
-                        "current_step": self.current_step,
-                        "max_steps": self.max_steps,
+                        "currenStep": self.current_step,
+                        "maxSteps": self.max_steps,
                     },
                 )
 
@@ -161,6 +161,16 @@ class BaseAgent(BaseModel, ABC):
             if self.current_step >= self.max_steps:
                 self.current_step = 0
                 self.state = AgentState.IDLE
+
+                Output.print(
+                    type="agentStep",
+                    text=f"Terminated: Reached max steps ({self.max_steps})",
+                    data={
+                        "currentStep": self.current_step,
+                        "maxSteps": self.max_steps,
+                    },
+                )
+
                 results.append(f"Terminated: Reached max steps ({self.max_steps})")
         await SANDBOX_CLIENT.cleanup()
         return "\n".join(results) if results else "No steps executed"

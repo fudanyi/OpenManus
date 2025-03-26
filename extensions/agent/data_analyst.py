@@ -8,7 +8,7 @@ from app.tool.bash import Bash
 from app.tool.chart_visualization.data_analysis_python import DataAnalysisPythonExecute
 from app.tool.chart_visualization.normal_python_execute import NormalPythonExecute
 from app.tool.file_saver import FileSaver
-from app.tool.planning import PlanningTool
+# from app.tool.planning import PlanningTool
 # from app.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
 # from app.tool.terminal import Terminal
@@ -40,7 +40,7 @@ class DataAnalyst(ToolCallAgent):
     available_tools: ToolCollection = Field(
         default_factory=lambda: ToolCollection(
             Terminate(),
-            PlanningTool(),
+            # PlanningTool(),
             NormalPythonExecute(),
             DataAnalysisPythonExecute(),
             # ChartVisualization(),

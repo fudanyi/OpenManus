@@ -13,6 +13,7 @@ from app.logger import logger
 from app.tool.base import BaseTool
 from extensions.output import Output
 
+
 class ChartVisualization(BaseTool):
     name: str = "generate_data_visualization"
     description: str = """Visualize a statistical chart using csv data and chart description. The tool accepts local csv data file path and description of the chart, and output a chart in png or html.
@@ -83,21 +84,25 @@ Note: Each tool call generates only one single chart.
                     await file.write(result["res"])
 
             Output.print(
-                type="chart_visualization",
+                type="chartVisualization",
                 text=f"📈 Chart Generation with data and description: {chart_description} with {csv_path}",
                 data={
-                    "chart_description": chart_description,
-                    "csv_path": csv_path,
-                    "chart_file_path": chart_file_path,
+                    "status": "success",
+                    "chartDescription": chart_description,
+                    "csvPath": csv_path,
+                    "chartFilepath": chart_file_path,
                 },
             )
 
             return {"observation": f"chart successfully saved to {chart_file_path}"}
         except Exception as e:
             Output.print(
-                type="chart_visualization_error",
+                type="chartVisualization",
                 text=f"Error: {e}",
-                data={"error": e},
+                data={
+                    "status": "error",
+                    "error": str(e),
+                },
             )
 
             return {

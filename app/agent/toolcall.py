@@ -44,6 +44,11 @@ class ToolCallAgent(ReActAgent):
             self.messages += [user_msg]
 
         try:
+            Output.print(
+                type="liveStatus",
+                text="Thinking...",
+            )
+
             # Get response with tool options
             response = await self.llm.ask_tool(
                 messages=self.messages,
@@ -82,9 +87,13 @@ class ToolCallAgent(ReActAgent):
         logger.info(f"✨ {self.name}'s thoughts: {content}")
 
         Output.print(
-            type="tool_call_think",
+            type="chat",
             text=f"✨ {self.name}'s thoughts: {content}",
-            data={"content": content},
+            data={
+                "sender": "assistant",
+                "agent": self.name,
+                "message": f"{content}",
+            },
         )
 
         logger.info(
@@ -97,16 +106,8 @@ class ToolCallAgent(ReActAgent):
             logger.info(f"🔧 Tool arguments: {tool_calls[0].function.arguments}")
 
             Output.print(
-                type="tool_call_tools",
+                type="liveStatus",
                 text=f"🧰 Tools being prepared: {[call.function.name for call in tool_calls]}",
-                data=[
-                    {
-                        "tool_call_id": call.id,
-                        "tool_call_name": call.function.name,
-                        "tool_call_arguments": call.function.arguments,
-                    }
-                    for call in tool_calls
-                ],
             )
 
         try:
@@ -163,23 +164,23 @@ class ToolCallAgent(ReActAgent):
             # Reset base64_image for each tool call
             self._current_base64_image = None
 
-            result = await self.execute_tool(command)
-
-            if self.max_observe:
-                result = result[: self.max_observe]
-
-            logger.info(
-                f"🎯 Tool '{command.function.name}' completed its mission! Result: {result}"
+            Output.print(
+                type="liveStatus",
+                text=f"Executing '{command.function.name}'...",
             )
 
+            result_raw = await self.execute_tool(command)
+
             Output.print(
-                type="tool_call_execute",
-                text=f"🎯 Tool '{command.function.name}' completed its mission! Result: {result}",
-                data={
-                    "tool_call_id": command.id,
-                    "tool_call_name": command.function.name,
-                    "result": result,
-                },
+                type="liveStatus",
+                text=f"Completed '{command.function.name}'...",
+            )
+
+            if self.max_observe:
+                result = result_raw[: self.max_observe]
+
+            logger.info(
+                f"🎯 Tool '{command.function.name}' completed its mission! Result: {result_raw}"
             )
 
             # Add tool response to memory
@@ -203,20 +204,22 @@ class ToolCallAgent(ReActAgent):
         if name not in self.available_tools.tool_map:
             return f"Error: Unknown tool '{name}'"
 
+        # Parse arguments
+        args = json.loads(command.function.arguments or "{}")
+
         try:
-            # Parse arguments
-            args = json.loads(command.function.arguments or "{}")
 
             # Execute the tool
             logger.info(f"🔧 Activating tool: '{name}'...")
 
             Output.print(
-                type="tool_call_execute",
-                text=f"🔧 Activating tool: '{name}'...",
+                type="execute",
+                text=f"🔧 Activating tool '{name}'...",
                 data={
-                    "tool_call_id": command.id,
-                    "tool_call_name": name,
-                    "result": "starting",
+                    "status": "executing",
+                    "id": command.id,
+                    "name": name,
+                    "arguments": args,
                 },
             )
 
@@ -224,6 +227,21 @@ class ToolCallAgent(ReActAgent):
 
             # Handle special tools
             await self._handle_special_tool(name=name, result=result)
+
+            Output.print(
+                type="execute",
+                text=f"🎯 Tool '{name}' completed its mission!",
+                data={
+                    "status": "completed",
+                    "id": command.id,
+                    "name": name,
+                    "arguments": args,
+                    "result": result,
+                    "base64_image": (
+                        result.base64_image if hasattr(result, "base64_image") else None
+                    ),
+                },
+            )
 
             # Check if result is a ToolResult with base64_image
             if hasattr(result, "base64_image") and result.base64_image:
@@ -251,10 +269,36 @@ class ToolCallAgent(ReActAgent):
             logger.error(
                 f"📝 Oops! The arguments for '{name}' don't make sense - invalid JSON, arguments:{command.function.arguments}"
             )
+
+            Output.print(
+                type="execute",
+                text=f"🚨 Error parsing arguments for '{name}': Invalid JSON format",
+                data={
+                    "status": "error",
+                    "id": command.id,
+                    "name": name,
+                    "arguments": args,
+                    "result": error_msg,
+                },
+            )
+
             return f"Error: {error_msg}"
         except Exception as e:
             error_msg = f"⚠️ Tool '{name}' encountered a problem: {str(e)}"
             logger.exception(error_msg)
+
+            Output.print(
+                type="execute",
+                text=f"🚨 Error executing tool '{name}': {str(e)}",
+                data={
+                    "status": "error",
+                    "id": command.id,
+                    "name": name,
+                    "arguments": args,
+                    "result": error_msg,
+                },
+            )
+
             return f"Error: {error_msg}"
 
     async def _handle_special_tool(self, name: str, result: Any, **kwargs):
@@ -265,16 +309,6 @@ class ToolCallAgent(ReActAgent):
         if self._should_finish_execution(name=name, result=result, **kwargs):
             # Set agent state to finished
             logger.info(f"🏁 Special tool '{name}' has completed the task!")
-
-            Output.print(
-                type="tool_call_finish",
-                text=f"🏁 Special tool '{name}' has completed the task!",
-                data={
-                    "tool_call_name": name,
-                    "result": result,
-                },
-            )
-
             self.state = AgentState.FINISHED
 
     @staticmethod

@@ -64,7 +64,7 @@ The tool accepts content and a file path, and saves the content to that location
                 await file.write(content)
 
             Output.print(
-                type="file_saver",
+                type="fileSaver",
                 text=f"Content successfully saved to {full_path}",
                 data={"file_path": full_path},
             )
