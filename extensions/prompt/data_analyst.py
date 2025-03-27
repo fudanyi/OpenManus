@@ -9,6 +9,7 @@ The initial directory is: {directory}
 
 NEXT_STEP_PROMPT = """
 Based on the data analysis task at hand, select the most appropriate tool.
+- PythonExecute tool is used for data analysis and visualization tasks.
 - Use human_input tool to get feedback of a problem, or after making an analysis plan, or other cases that you think need human input.
 - If you haven't, break down complex analyses into clear steps after doing basic check on data schema.
 - You can leverage the DataSource tool to query, create, and manage external datasources.

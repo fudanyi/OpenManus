@@ -1,4 +1,4 @@
-from extensions.prompt import table
+from extensions.prompt import table, chart
 from app.tool.python_execute import PythonExecute
 
 
@@ -8,7 +8,8 @@ class PythonExecute(PythonExecute):
     name: str = "python_execute"
     description: str = (
         "Executes Python code string in data analysis task, save data table in csv file. Note: Only print outputs are visible, function return values are not captured. Use print statements to see results.\n"
-        + table.PROMPT
+        + table.PROMPT + "\n"
+        + chart.PROMPT
     )
 
     parameters: dict = {

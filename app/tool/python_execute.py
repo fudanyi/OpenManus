@@ -65,7 +65,7 @@ class PythonExecute(BaseTool):
 
         with multiprocessing.Manager() as manager:
             result = manager.dict(
-                {"observation": "", "success": False, "output_files": []}
+                {"observation": "", "success": False, "output_files": output_files}
             )
             if isinstance(__builtins__, dict):
                 safe_globals = {"__builtins__": __builtins__}
