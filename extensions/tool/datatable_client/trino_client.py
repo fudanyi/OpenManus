@@ -42,19 +42,13 @@ class TrinoDataTableClient(DataTableClient):
         for item in json_result["data"]:
             filtered_item = {
                 "id": item["id"],
-                "userId": item["userId"],
                 "tableName": item["tableName"],
                 "displayName": item["displayName"],
                 "description": item["description"],
-                "connectionString": item["connectionString"],
-                "createdFrom": item["createdFrom"],
                 "fieldsCount": item["fieldsCount"],
                 "rowsCount": item["rowsCount"],
                 "isPublic": item["isPublic"],
                 "isReadOnly": item["isReadOnly"],
-                "isWeaklyTyped": item["isWeaklyTyped"],
-                "createdAt": item["createdAt"],
-                "latestModifyAt": item["latestModifyAt"],
             }
             filtered_data.append(filtered_item)
         return filtered_data
@@ -70,7 +64,11 @@ class TrinoDataTableClient(DataTableClient):
             "id": result_data["id"],
             "displayName": result_data["displayName"],
             "tableName": result_data["tableName"],
-            "type": result_data["type"],
+            "fieldsCount": result_data["fieldsCount"],
+            "rowsCount": result_data["rowsCount"],
+            "description": result_data["description"],
+            "isPublic": result_data["isPublic"],
+            "isReadOnly": result_data["isReadOnly"],
         }
 
         table_schema = self.get_table_schema(table_info["id"])
@@ -88,7 +86,11 @@ class TrinoDataTableClient(DataTableClient):
             "id": result_data["id"],
             "displayName": result_data["displayName"],
             "tableName": result_data["tableName"],
-            "type": result_data["type"],
+            "fieldsCount": result_data["fieldsCount"],
+            "rowsCount": result_data["rowsCount"],
+            "description": result_data["description"],
+            "isPublic": result_data["isPublic"],
+            "isReadOnly": result_data["isReadOnly"],
         }
 
         table_schema = self.get_table_schema(table_info["id"])
@@ -105,7 +107,7 @@ class TrinoDataTableClient(DataTableClient):
             {
                 "fieldName": x["fieldName"],
                 "displayName": x["displayName"],
-                "isDeleted": x["isDeleted"],
+                "description": x["description"],
                 "fieldType": x["fieldType"],
             }
             for x in result_data
