@@ -3,7 +3,6 @@ import sys
 from io import StringIO
 from typing import Dict
 
-from app.prompt import table
 from app.tool.base import BaseTool
 
 
@@ -13,7 +12,6 @@ class PythonExecute(BaseTool):
     name: str = "python_execute"
     description: str = (
         "Executes Python code string. Note: Only print outputs are visible, function return values are not captured. Use print statements to see results.\n"
-        + table.PROMPT
     )
 
     parameters: dict = {

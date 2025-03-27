@@ -5,13 +5,10 @@ from app.config import config
 from app.tool import Terminate, ToolCollection
 from app.tool.bash import Bash
 
-# from app.tool.chart_visualization.chart_visualization import ChartVisualization
-from app.tool.chart_visualization.data_analysis_python import DataAnalysisPythonExecute
-from app.tool.chart_visualization.normal_python_execute import NormalPythonExecute
 from app.tool.file_saver import FileSaver
 
 # from app.tool.planning import PlanningTool
-# from app.tool.python_execute import PythonExecute
+from extensions.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
 
 # from app.tool.terminal import Terminal
@@ -46,8 +43,7 @@ class DataAnalyst(ToolCallAgent):
             Terminate(),
             HumanInput(),
             # PlanningTool(),
-            NormalPythonExecute(),
-            DataAnalysisPythonExecute(),
+            PythonExecute(),
             # ChartVisualization(),
             DataSource(),
             WebSearch(),
