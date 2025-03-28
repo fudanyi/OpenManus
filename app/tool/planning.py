@@ -59,7 +59,7 @@ class PlanningTool(BaseTool):
                 "type": "string",
             },
             "step_notes": {
-                "description": "Additional notes for a step. Optional for mark_step command.",
+                "description": "Additional notes for a step, should contain important information which can be used for final analysis report/deliverable. Optional for mark_step command.",
                 "type": "string",
             },
         },

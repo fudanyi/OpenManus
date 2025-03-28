@@ -1,4 +1,6 @@
+import base64
 import json
+import ast
 from typing import Any, List, Optional, Union
 
 from pydantic import Field
@@ -8,7 +10,7 @@ from app.agent.react import ReActAgent
 from app.exceptions import TokenLimitExceeded
 from app.logger import logger
 from app.prompt.toolcall import NEXT_STEP_PROMPT, SYSTEM_PROMPT
-from app.schema import TOOL_CHOICE_TYPE, AgentState, Message, ToolCall, ToolChoice
+from app.schema import TOOL_CHOICE_TYPE, AgentState, Message, Role, ToolCall, ToolChoice
 from app.tool import CreateChatCompletion, Terminate, ToolCollection
 from extensions.output import Output
 
@@ -49,17 +51,70 @@ class ToolCallAgent(ReActAgent):
                 text="Thinking...",
             )
 
-            # Get response with tool options
-            response = await self.llm.ask_tool(
-                messages=self.messages,
-                system_msgs=(
-                    [Message.system_message(self.system_prompt)]
-                    if self.system_prompt
-                    else None
-                ),
-                tools=self.available_tools.to_params(),
-                tool_choice=self.tool_choices,
+            last_message = self.messages[-2] if self.messages else None
+            # print("\n")
+            # print(last_message)
+            # print("\n")
+
+            is_python_execute = (
+                last_message 
+                and last_message.role == Role.TOOL
+                and last_message.name == "python_execute"
             )
+            
+            has_output_files = False
+            if is_python_execute and last_message.content:
+                try:
+                    # Try to parse the content as JSON to check for output_files
+                    
+                    content_dict = last_message.content.replace("Observed output of cmd `python_execute` executed:", "")
+
+                    content_dict = ast.literal_eval(content_dict)
+                    
+                    # Only check for image files in output_files
+                    has_output_files = (
+                        "output_files" in content_dict 
+                        and content_dict["output_files"]
+                        and any(
+                            file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))
+                            for file in content_dict["output_files"]
+                        )
+                    )
+                except json.JSONDecodeError as err:
+                    # If content is not JSON, check if it contains image file extensions
+                    has_output_files = any(
+                        ext in last_message.content.lower()
+                        for ext in ['.png', '.jpg', '.jpeg', '.gif', '.webp']
+                    )
+
+
+            if is_python_execute and has_output_files:
+                # Use ask_tool_with_image for python_execute results with output files
+                # print("\n using image think")
+
+                response = await self.llm.ask_tool_with_image(
+                    messages=self.messages,
+                    tools=self.available_tools.to_params(),
+                    images=content_dict.get("output_files", []),
+                    tool_choice=self.tool_choices,
+                    system_msgs=(
+                        [Message.system_message(self.system_prompt)]
+                        if self.system_prompt
+                        else None
+                    ),
+                )
+            else:
+                # Regular ask_tool for other messages
+                response = await self.llm.ask_tool(
+                    messages=self.messages,
+                    system_msgs=(
+                        [Message.system_message(self.system_prompt)]
+                        if self.system_prompt
+                        else None
+                    ),
+                    tools=self.available_tools.to_params(),
+                    tool_choice=self.tool_choices,
+                )
         except ValueError:
             raise
         except Exception as e:

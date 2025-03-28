@@ -1,3 +1,4 @@
+import base64
 import math
 from typing import Dict, List, Optional, Union
 
@@ -39,6 +40,7 @@ MULTIMODAL_MODELS = [
     "claude-3-opus-20240229",
     "claude-3-sonnet-20240229",
     "claude-3-haiku-20240307",
+    "claude-3-5-sonnet-latest",
 ]
 
 
@@ -333,7 +335,7 @@ class LLM:
                         {
                             "type": "image_url",
                             "image_url": {
-                                "url": f"data:image/jpeg;base64,{message['base64_image']}"
+                                "url": f"data:image/png;base64,{message['base64_image']}"
                             },
                         }
                     )
@@ -355,6 +357,41 @@ class LLM:
         for msg in formatted_messages:
             if msg["role"] not in ROLE_VALUES:
                 raise ValueError(f"Invalid role: {msg['role']}")
+
+        # Filter: remove image data except current image think request(last message)
+        for msg in formatted_messages[:-1]:
+            if "content" in msg:
+                if isinstance(msg["content"], str):
+                    # Skip if content is string since it won't have image data
+                    pass
+                elif isinstance(msg["content"], list):
+                    # Extract all text content and combine into single string
+                    text_content = " ".join(
+                        item["text"] for item in msg["content"] 
+                        if isinstance(item, dict) and item.get("type") == "text"
+                    )
+                    # Replace content with combined text string
+                    msg["content"] = text_content
+
+        # Filter: remove all user message that are duplicate to last message's content, the goal is remove duplicate "next prompts" in REACT
+        # Get the last message's content
+        last_msg = formatted_messages[-1]
+        last_content = ""
+        
+        # Extract text content from last message(should be a next prompt in REACT)
+        if last_msg.get("role") == "user" and isinstance(last_msg.get("content"), str):
+            last_content = last_msg["content"]
+        elif last_msg.get("role") == "user" and isinstance(last_msg.get("content"), list):
+            last_content = " ".join(
+                item["text"] for item in last_msg["content"]
+                if isinstance(item, dict) and item.get("type") == "text"
+            )
+        
+        # Filter out messages with duplicate content
+        formatted_messages = [
+            msg for msg in formatted_messages[:-1]
+            if msg.get("content") != last_content
+        ] + [last_msg]
 
         return formatted_messages
 
@@ -544,9 +581,7 @@ class LLM:
             multimodal_content = (
                 [{"type": "text", "text": content}]
                 if isinstance(content, str)
-                else content
-                if isinstance(content, list)
-                else []
+                else content if isinstance(content, list) else []
             )
 
             # Add images to content
@@ -769,4 +804,111 @@ class LLM:
             raise
         except Exception as e:
             logger.error(f"Unexpected error in ask_tool: {e}")
+            raise
+
+    @retry(
+        wait=wait_random_exponential(min=1, max=60),
+        stop=stop_after_attempt(6),
+        retry=retry_if_exception_type((OpenAIError, Exception, ValueError)),
+    )
+    async def ask_tool_with_image(
+        self,
+        messages: List[Message],
+        tools: List[Dict],
+        images: Union[str, List[str], List[Dict]],
+        tool_choice: TOOL_CHOICE_TYPE = ToolChoice.AUTO,
+        system_msgs: Optional[List[Message]] = None,
+        temperature: Optional[float] = None,
+        timeout: Optional[int] = None,
+        **kwargs,
+    ) -> str:
+        """
+        Send a request to the LLM with tools and images, returning the response.
+
+        Args:
+            messages: List of conversation messages
+            tools: List of tool definitions
+            images: Single image URL, list of image URLs, or list of image dicts with detail level
+                   Image dict format: {"url": "image_url", "detail": "low|medium|high"}
+            tool_choice: Tool choice mode (auto, none, or required)
+            system_msgs: Optional system messages to prepend
+            temperature: Optional temperature override
+            timeout: Optional timeout in seconds
+            **kwargs: Additional parameters to pass to the API
+
+        Returns:
+            ChatCompletionMessage or None if response is invalid
+        """
+        try:
+            # Normalize images input to list of dicts
+            image_contents = []
+            if isinstance(images, str):
+                images = [images]
+
+            for img in images:
+                if isinstance(img, str):
+                    # Read local file and encode as base64
+                    with open(img, "rb") as f:
+                        base64_image = base64.b64encode(f.read()).decode("utf-8")
+                    # Get file extension and map to media type
+                    ext = img.lower().split(".")[-1]
+                    media_type = {
+                        "jpg": "image/jpeg",
+                        "jpeg": "image/jpeg",
+                        "png": "image/png",
+                        "gif": "image/gif",
+                        "webp": "image/webp",
+                    }.get(ext, "image/jpeg")
+                    image_contents.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{media_type};base64,{base64_image}"
+                            },
+                        }
+                    )
+                elif isinstance(img, dict):
+                    # Read local file from dict url and encode as base64
+                    with open(img["url"], "rb") as f:
+                        base64_image = base64.b64encode(f.read()).decode("utf-8")
+                    # Get file extension and map to media type
+                    ext = img["url"].lower().split(".")[-1]
+                    media_type = {
+                        "jpg": "image/jpeg",
+                        "jpeg": "image/jpeg",
+                        "png": "image/png",
+                        "gif": "image/gif",
+                        "webp": "image/webp",
+                    }.get(ext, "image/jpeg")
+                    image_contents.append(
+                        {
+                            "type": "image_url",
+                            "image_url": {
+                                "url": f"data:{media_type};base64,{base64_image}"
+                            },
+                        }
+                    )
+
+            # Add images to the last user message
+            if messages and messages[-1].role == "user":
+                messages[-1].content = image_contents + (
+                    [{"type": "text", "text": messages[-1].content}]
+                )
+            else:
+                # Create new user message with images if last message wasn't from user
+                messages.append(Message(role="user", content=image_contents))
+
+            # call ask_tool with the new messages
+            return await self.ask_tool(
+                messages=messages,
+                tools=tools,
+                system_msgs=system_msgs,
+                temperature=temperature,
+                tool_choice=tool_choice,
+                timeout=timeout,
+                **kwargs,
+            )
+
+        except Exception as e:
+            logger.error(f"Unexpected error in ask_tool_with_image: {e}")
             raise

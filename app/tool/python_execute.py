@@ -43,6 +43,7 @@ class PythonExecute(BaseTool):
         except Exception as e:
             result_dict["observation"] = str(e)
             result_dict["success"] = False
+            result_dict["output_files"] = []
         finally:
             sys.stdout = original_stdout
 
