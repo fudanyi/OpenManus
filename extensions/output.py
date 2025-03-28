@@ -1,4 +1,5 @@
 import json
+import sys
 import time
 import uuid
 from datetime import datetime
@@ -34,6 +35,7 @@ class Output:
         output = self._pack(type, text, data)
         logger.info(output)
         print(output)
+        sys.stdout.flush()
 
         # 同时写入文件到 logs/{datetime}.output
         current_date = datetime.now()
