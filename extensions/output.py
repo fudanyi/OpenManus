@@ -1,10 +1,19 @@
 import json
 import sys
 import time
+from typing import Any
 import uuid
 from datetime import datetime
 from app.logger import logger
 from app.config import PROJECT_ROOT
+
+
+class CustomJSONEncoder(json.JSONEncoder):
+    def default(self, obj: Any) -> Any:
+        if hasattr(obj, "__dict__"):
+            # 对于有__dict__属性的对象，只序列化其__dict__
+            return obj.__dict__
+        return super().default(obj)
 
 
 class Output:
@@ -34,8 +43,8 @@ class Output:
         """
         output = self._pack(type, text, data)
         logger.info(output)
-        print(output)
-        sys.stdout.flush()
+        output_str = json.dumps(output, cls=CustomJSONEncoder)
+        print(output_str, flush=True)
 
         # 同时写入文件到 logs/{datetime}.output
         current_date = datetime.now()
@@ -44,8 +53,8 @@ class Output:
         log_path.mkdir(exist_ok=True)
         with open(log_path / f"{formatted_date}.output", "a", encoding="utf-8") as f:
             try:
-                f.write(json.dumps(output, ensure_ascii=False, indent=4) + ",\n")
-            except Exception as e:
+                f.write(output_str + ",\n")
+            except Exception:
                 # logger.error(f"Error writing to output file: {e}")
                 pass
 
