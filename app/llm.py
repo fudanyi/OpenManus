@@ -358,6 +358,8 @@ class LLM:
             if msg["role"] not in ROLE_VALUES:
                 raise ValueError(f"Invalid role: {msg['role']}")
 
+        #BUG: may have bug to wrongly remove duplicate human inputs or human inputted images, need fixing
+
         # Filter: remove image data except current image think request(last message)
         for msg in formatted_messages[:-1]:
             if "content" in msg:

@@ -51,6 +51,7 @@ class ToolCallAgent(ReActAgent):
                 text="Thinking...",
             )
 
+            # check if last func message is a python tools call with image output, if yes need to call ask_tool_with_image
             last_message = self.messages[-2] if self.messages else None
             # print("\n")
             # print(last_message)
