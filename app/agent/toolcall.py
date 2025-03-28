@@ -58,23 +58,23 @@ class ToolCallAgent(ReActAgent):
             # print("\n")
 
             is_python_execute = (
-                last_message 
+                last_message
                 and last_message.role == Role.TOOL
                 and last_message.name == "python_execute"
             )
-            
+
             has_output_files = False
             if is_python_execute and last_message.content:
                 try:
                     # Try to parse the content as JSON to check for output_files
-                    
+
                     content_dict = last_message.content.replace("Observed output of cmd `python_execute` executed:", "")
 
                     content_dict = ast.literal_eval(content_dict)
-                    
+
                     # Only check for image files in output_files
                     has_output_files = (
-                        "output_files" in content_dict 
+                        "output_files" in content_dict
                         and content_dict["output_files"]
                         and any(
                             file.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))

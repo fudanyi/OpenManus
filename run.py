@@ -1,46 +1,65 @@
+import argparse
 import asyncio
 import time
 
-from app.logger import logger
 from app.flow.flow_factory import FlowFactory, FlowType
+from app.logger import logger
 from extensions.agent.data_analyst import DataAnalyst
 from extensions.output import Output
+from extensions.session import (
+    get_session_id,
+    has_session,
+    load_flow_from_session,
+    save_flow_to_session,
+)
+
+SESSION_FOLDER = "sessions"
 
 
-async def run_flow():
+async def run_flow(session_id: str):
     agents = {
         "dataAnalyst": DataAnalyst(),
     }
 
     try:
-        prompt = input("Enter your prompt: ")
-
-        if prompt.strip().isspace() or not prompt:
-            logger.warning("Empty prompt provided.")
-            return
-
-        if prompt == "exit":
-            logger.info("Exited")
-            Output.print(
-                type="mainExited",
-                text="Request processing exited",
-            )
-            return
-
-        flow = FlowFactory.create_flow(
-            flow_type=FlowType.PLANNING,
-            agents=agents,
-        )
-        logger.warning("Processing your request...")
-
         Output.print(
-            type="chat",
-            text=f"{prompt}",
-            data={
-                "sender": "user",
-                "message": prompt,
-            },
+            type="mainStart",
+            text=f"Start session {session_id}",
         )
+
+        # 如果有session文件，则读取
+        if has_session(session_id):
+            prompt = ""
+            start_time = time.time()
+            flow = load_flow_from_session(session_id, FlowType.PLANNING, agents)
+        # 如果没有session文件，则创建
+        else:
+            prompt = input("Enter your prompt: ")
+            if prompt.strip().isspace() or not prompt:
+                logger.warning("Empty prompt provided.")
+                return
+            if prompt == "exit":
+                logger.info("Exited")
+                Output.print(
+                    type="mainExited",
+                    text="Request processing exited",
+                )
+                return
+            logger.warning("Processing your request...")
+
+            Output.print(
+                type="chat",
+                text=f"{prompt}",
+                data={
+                    "sender": "user",
+                    "message": prompt,
+                },
+            )
+
+            flow = FlowFactory.create_flow(
+                flow_type=FlowType.PLANNING,
+                agents=agents,
+            )
 
         try:
             start_time = time.time()
@@ -61,11 +80,6 @@ async def run_flow():
                 },
             )
 
-            Output.print(
-                type="mainCompleted",
-                text=f"Request processing completed in {elapsed_time:.2f} seconds.",
-            )
-
         except asyncio.TimeoutError:
             logger.error("Request processing timed out after 1 hour")
             logger.info(
@@ -76,6 +90,14 @@ async def run_flow():
                 type="mainTimeout",
                 text="Operation terminated due to timeout. Please try a simpler request.",
             )
+        finally:
+            # 保存session
+            save_flow_to_session(session_id, flow)
+
+        Output.print(
+            type="mainCompleted",
+            text=f"Request processing completed in {elapsed_time:.2f} seconds.",
+        )
 
     except KeyboardInterrupt:
         logger.info("Operation cancelled by user.")
@@ -158,5 +180,15 @@ async def main():
 
 
 if __name__ == "__main__":
-    # asyncio.run(main())
-    asyncio.run(run_flow())
+    # 获取参数sessionId
+    parser = argparse.ArgumentParser(description="Run the application")
+    parser.add_argument("--sid", type=str, help="Session ID")
+    args = parser.parse_args()
+    if args.sid:
+        session_id = args.sid
+    else:
+        # session_id = "f4646819-1613-4e92-8661-bde26a6bdbec"
+        session_id = get_session_id()
+
+    # asyncio.run(main(session_id))
+    asyncio.run(run_flow(session_id))
