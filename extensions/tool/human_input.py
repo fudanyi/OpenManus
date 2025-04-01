@@ -16,6 +16,11 @@ class HumanInput(BaseTool):
                 "type": "string",
                 "description": "The prompt to show to the user",
             },
+            "type": {
+                "type": "string",
+                "description": "The type of input to get",
+                "enum": ["new_datasource","feedback","others"],
+            },
             "default": {
                 "type": "string",
                 "description": "The default value if user just presses Enter",
@@ -27,6 +32,7 @@ class HumanInput(BaseTool):
     async def execute(
         self,
         prompt: str,
+        type: str,
         default: Optional[str] = None,
     ) -> ToolResult:
         """
@@ -45,6 +51,7 @@ class HumanInput(BaseTool):
                 text=f"{prompt}",
                 data={
                     "sender": "assistant",
+                    "type": type,
                     "message": prompt,
                 },
             )

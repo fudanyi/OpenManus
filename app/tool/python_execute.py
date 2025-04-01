@@ -28,8 +28,30 @@ class PythonExecute(BaseTool):
                     "type": "string",
                 },
             },
+            "charts": {
+                "type": "array", 
+                "description": "The charts to output.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the chart"
+                        },
+                        "image_file": {
+                            "type": "string", 
+                            "description": "The output image file path"
+                        },
+                        "config_file": {
+                            "type": "string",
+                            "description": "The chart configuration JSON's file path"
+                        }
+                    },
+                    "required": ["name", "image_file", "config_file"]
+                }
+            },
         },
-        "required": ["code", "output_files"],
+        "required": ["code", "output_files", "charts"],
     }
 
     def _run_code(self, code: str, result_dict: dict, safe_globals: dict) -> None:
@@ -44,6 +66,7 @@ class PythonExecute(BaseTool):
             result_dict["observation"] = str(e)
             result_dict["success"] = False
             result_dict["output_files"] = []
+            result_dict["charts"] = []
         finally:
             sys.stdout = original_stdout
 
@@ -51,6 +74,7 @@ class PythonExecute(BaseTool):
         self,
         code: str,
         output_files: list,
+        charts: list,
         timeout: int = 150,
     ) -> Dict:
         """
@@ -66,7 +90,7 @@ class PythonExecute(BaseTool):
 
         with multiprocessing.Manager() as manager:
             result = manager.dict(
-                {"observation": "", "success": False, "output_files": output_files}
+                {"observation": "", "success": False, "output_files": output_files, "charts": charts}
             )
             if isinstance(__builtins__, dict):
                 safe_globals = {"__builtins__": __builtins__}
@@ -86,5 +110,6 @@ class PythonExecute(BaseTool):
                     "observation": f"Execution timeout after {timeout} seconds",
                     "success": False,
                     "output_files": output_files,
+                    "charts": charts,
                 }
             return dict(result)

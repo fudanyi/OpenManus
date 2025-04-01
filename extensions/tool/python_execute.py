@@ -26,11 +26,33 @@ class PythonExecute(PythonExecute):
                     "type": "string",
                 },
             },
+            "charts": {
+                "type": "array", 
+                "description": "The charts to output.",
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "name": {
+                            "type": "string",
+                            "description": "The name of the chart"
+                        },
+                        "image_file": {
+                            "type": "string", 
+                            "description": "The output image file path"
+                        },
+                        "config_file": {
+                            "type": "string",
+                            "description": "The chart configuration JSON's file path"
+                        }
+                    },
+                    "required": ["name", "image_file", "config_file"]
+                }
+            },
         },
-        "required": ["code", "output_files"],
+        "required": ["code", "output_files", "charts"],
     }
 
-    async def execute(self, code: str, output_files: list, timeout: int = 150) -> dict:
+    async def execute(self, code: str, output_files: list, charts: list, timeout: int = 150) -> dict:
         """
         Executes the provided Python code with a timeout.
 
@@ -42,4 +64,4 @@ class PythonExecute(PythonExecute):
         Returns:
             Dict: Contains 'output' with execution output or error message and 'success' status.
         """
-        return await super().execute(code, output_files, timeout)
+        return await super().execute(code, output_files, charts, timeout)
