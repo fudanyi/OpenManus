@@ -16,7 +16,6 @@ from app.tool.search import (
     GoogleSearchEngine,
     WebSearchEngine,
 )
-from extensions.output import Output
 from app.tool.search.base import SearchItem
 
 
@@ -298,18 +297,6 @@ class WebSearch(BaseTool):
         for engine_name in engine_order:
             engine = self._search_engine[engine_name]
             logger.info(f"🔎 Attempting search with {engine_name.capitalize()}...")
-            
-            Output.print(
-                    type="webSearch",
-                    text=f"🔎 Attempting search with {engine_name.capitalize()}...",
-                data={
-                        "status": "in_progress",
-                        "engineName": engine_name,
-                    "query": query,
-                    "numResults": num_results,
-                },
-            )
-                
             search_items = await self._perform_search_with_engine(
                 engine, query, num_results, search_params
             )
@@ -334,34 +321,9 @@ class WebSearch(BaseTool):
                 )
                 for i, item in enumerate(search_items)
             ]
-                Output.print(
-
-                    Output.print(
-                        type="webSearch",
-                        text=f"⚠️ {engine_name.capitalize()} search failed with error: {e}",
-                        data={
-                            "status": "error",
-                            "engineName": engine_name,
-                            "query": query,
-                            "numResults": num_results,
-                            "error": str(e),
-                        },
-                    )
 
         if failed_engines:
             logger.error(f"All search engines failed: {', '.join(failed_engines)}")
-
-            Output.print(
-                type="webSearch",
-                text=f"All search engines failed: {', '.join(failed_engines)}",
-                data={
-                    "status": "error",
-                    "engineName": ", ".join(failed_engines),
-                    "query": query,
-                    "numResults": num_results,
-                    "error": f"All search engines failed: {', '.join(failed_engines)}",
-                },
-            )
         return []
 
     async def _fetch_content_for_results(
