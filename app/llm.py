@@ -847,7 +847,7 @@ class LLM:
             if isinstance(images, str):
                 images = [images]
 
-            for img in images:
+            for img in [img for img in images if str(img).lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]:
                 if isinstance(img, str):
                     # Read local file and encode as base64
                     with open(img, "rb") as f:

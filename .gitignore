@@ -200,3 +200,4 @@ cython_debug/
 
 # node
 node_modules
+sessions/

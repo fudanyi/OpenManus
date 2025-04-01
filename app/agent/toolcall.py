@@ -96,7 +96,7 @@ class ToolCallAgent(ReActAgent):
                 response = await self.llm.ask_tool_with_image(
                     messages=self.messages,
                     tools=self.available_tools.to_params(),
-                    images=content_dict.get("output_files", []),
+                    images=[f for f in content_dict.get("output_files", []) if f.lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))],
                     tool_choice=self.tool_choices,
                     system_msgs=(
                         [Message.system_message(self.system_prompt)]
