@@ -21,7 +21,7 @@ class PythonExecute(PythonExecute):
             },
             "output_files": {
                 "type": "array",
-                "description": "The files to output.",
+                "description": "The files to output, excluding files in charts parameter.",
                 "items": {
                     "type": "string",
                 },

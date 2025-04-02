@@ -88,6 +88,14 @@ class PythonExecute(BaseTool):
             Dict: Contains 'output' with execution output or error message and 'success' status.
         """
 
+        # Remove output files that are already in charts to avoid duplicates
+        chart_files = set()
+        for chart in charts:
+            chart_files.add(chart["image_file"])
+            chart_files.add(chart["config_file"])
+        
+        output_files = [f for f in output_files if f not in chart_files]
+
         with multiprocessing.Manager() as manager:
             result = manager.dict(
                 {"observation": "", "success": False, "output_files": output_files, "charts": charts}
