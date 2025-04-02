@@ -486,6 +486,8 @@ class LLM:
             collected_messages = []
             completion_text = ""
             async for chunk in response:
+                if chunk.choices == None:
+                    continue
                 chunk_message = chunk.choices[0].delta.content or ""
                 collected_messages.append(chunk_message)
                 completion_text += chunk_message

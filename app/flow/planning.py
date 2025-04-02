@@ -123,7 +123,7 @@ class PlanningFlow(BaseFlow):
 
                 Output.print(
                     type="liveStatus",
-                    text=f"Executing plan step {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
+                    text=f"Executing plan step {self.current_step_index + 1}/{sum(len(section['steps']) for section in self.planning_tool.plans[self.active_plan_id].get('sections', []))}",
                 )
 
                 # Execute current step with appropriate agent
@@ -134,7 +134,7 @@ class PlanningFlow(BaseFlow):
 
                 Output.print(
                     type="liveStatus",
-                    text=f"Completed plan step {self.current_step_index + 1}/{len(self.planning_tool.plans[self.active_plan_id].get('steps', []))}",
+                    text=f"Completed plan step {self.current_step_index + 1}/{sum(len(section['steps']) for section in self.planning_tool.plans[self.active_plan_id].get('sections', []))}",
                 )
 
                 # Check if agent wants to terminate
@@ -183,6 +183,7 @@ class PlanningFlow(BaseFlow):
 
         Output.print(
             type="chat",
+            text=response.content,
             data={
                 "sender": "assistant",
                 "message": response.content,
