@@ -9,6 +9,7 @@ from extensions.output import Output
 _PLANNING_TOOL_DESCRIPTION = """
 A planning tool that allows the agent to create and manage plans for solving complex tasks.
 The tool provides functionality for creating plans, updating plan steps, and tracking progress.
+Plans are organized into sections, with each section containing multiple steps.
 """
 
 
@@ -16,6 +17,7 @@ class PlanningTool(BaseTool):
     """
     A planning tool that allows the agent to create and manage plans for solving complex tasks.
     The tool provides functionality for creating plans, updating plan steps, and tracking progress.
+    Plans are organized into sections, with each section containing multiple steps.
     """
 
     name: str = "planning"
@@ -44,10 +46,20 @@ class PlanningTool(BaseTool):
                 "description": "Title for the plan. Required for create command, optional for update command.",
                 "type": "string",
             },
-            "steps": {
-                "description": "List of plan steps. Required for create command, optional for update command.",
+            "sections": {
+                "description": "List of sections, each containing a title and steps. Required for create command, optional for update command.",
                 "type": "array",
-                "items": {"type": "string"},
+                "items": {
+                    "type": "object",
+                    "properties": {
+                        "title": {"type": "string"},
+                        "steps": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        }
+                    },
+                    "required": ["title", "steps"]
+                }
             },
             "step_index": {
                 "description": "Index of the step to update (0-based). Required for mark_step command.",
@@ -78,7 +90,7 @@ class PlanningTool(BaseTool):
         ],
         plan_id: Optional[str] = None,
         title: Optional[str] = None,
-        steps: Optional[List[str]] = None,
+        sections: Optional[List[Dict]] = None,
         step_index: Optional[int] = None,
         step_status: Optional[
             Literal["not_started", "in_progress", "completed", "blocked"]
@@ -93,16 +105,16 @@ class PlanningTool(BaseTool):
         - command: The operation to perform
         - plan_id: Unique identifier for the plan
         - title: Title for the plan (used with create command)
-        - steps: List of steps for the plan (used with create command)
+        - sections: List of sections, each containing a title and steps (used with create command)
         - step_index: Index of the step to update (used with mark_step command)
         - step_status: Status to set for a step (used with mark_step command)
         - step_notes: Additional notes for a step (used with mark_step command)
         """
 
         if command == "create":
-            return self._create_plan(plan_id, title, steps)
+            return self._create_plan(plan_id, title, sections)
         elif command == "update":
-            return self._update_plan(plan_id, title, steps)
+            return self._update_plan(plan_id, title, sections)
         elif command == "list":
             return self._list_plans()
         elif command == "get":
@@ -119,9 +131,9 @@ class PlanningTool(BaseTool):
             )
 
     def _create_plan(
-        self, plan_id: Optional[str], title: Optional[str], steps: Optional[List[str]]
+        self, plan_id: Optional[str], title: Optional[str], sections: Optional[List[Dict]]
     ) -> ToolResult:
-        """Create a new plan with the given ID, title, and steps."""
+        """Create a new plan with the given ID, title, and sections."""
         if not plan_id:
             raise ToolError("Parameter `plan_id` is required for command: create")
 
@@ -133,23 +145,32 @@ class PlanningTool(BaseTool):
         if not title:
             raise ToolError("Parameter `title` is required for command: create")
 
-        if (
-            not steps
-            or not isinstance(steps, list)
-            or not all(isinstance(step, str) for step in steps)
-        ):
+        if not sections or not isinstance(sections, list):
             raise ToolError(
-                "Parameter `steps` must be a non-empty list of strings for command: create"
+                "Parameter `sections` must be a non-empty list for command: create"
             )
 
-        # Create a new plan with initialized step statuses
+        # Validate sections structure
+        for section in sections:
+            if not isinstance(section, dict) or "title" not in section or "steps" not in section:
+                raise ToolError("Each section must be a dictionary with 'title' and 'steps' keys")
+            if not isinstance(section["steps"], list) or not all(isinstance(step, str) for step in section["steps"]):
+                raise ToolError("Each section's steps must be a list of strings")
+
+        # Create a new plan with initialized step statuses and notes
         plan = {
             "plan_id": plan_id,
             "title": title,
-            "steps": steps,
-            "step_statuses": ["not_started"] * len(steps),
-            "step_notes": [""] * len(steps),
+            "sections": sections,
+            "step_statuses": [],
+            "step_notes": [],
         }
+
+        # Initialize statuses and notes for all steps
+        for section in sections:
+            for _ in section["steps"]:
+                plan["step_statuses"].append("not_started")
+                plan["step_notes"].append("")
 
         Output.print(
             type="createPlan",
@@ -165,9 +186,9 @@ class PlanningTool(BaseTool):
         )
 
     def _update_plan(
-        self, plan_id: Optional[str], title: Optional[str], steps: Optional[List[str]]
+        self, plan_id: Optional[str], title: Optional[str], sections: Optional[List[Dict]]
     ) -> ToolResult:
-        """Update an existing plan with new title or steps."""
+        """Update an existing plan with new title or sections."""
         if not plan_id:
             raise ToolError("Parameter `plan_id` is required for command: update")
 
@@ -179,16 +200,19 @@ class PlanningTool(BaseTool):
         if title:
             plan["title"] = title
 
-        if steps:
-            if not isinstance(steps, list) or not all(
-                isinstance(step, str) for step in steps
-            ):
-                raise ToolError(
-                    "Parameter `steps` must be a list of strings for command: update"
-                )
+        if sections:
+            if not isinstance(sections, list):
+                raise ToolError("Parameter `sections` must be a list for command: update")
 
-            # Preserve existing step statuses for unchanged steps
-            old_steps = plan["steps"]
+            # Validate sections structure
+            for section in sections:
+                if not isinstance(section, dict) or "title" not in section or "steps" not in section:
+                    raise ToolError("Each section must be a dictionary with 'title' and 'steps' keys")
+                if not isinstance(section["steps"], list) or not all(isinstance(step, str) for step in section["steps"]):
+                    raise ToolError("Each section's steps must be a list of strings")
+
+            # Preserve existing step statuses and notes
+            old_sections = plan["sections"]
             old_statuses = plan["step_statuses"]
             old_notes = plan["step_notes"]
 
@@ -196,16 +220,26 @@ class PlanningTool(BaseTool):
             new_statuses = []
             new_notes = []
 
-            for i, step in enumerate(steps):
-                # If the step exists at the same position in old steps, preserve status and notes
-                if i < len(old_steps) and step == old_steps[i]:
-                    new_statuses.append(old_statuses[i])
-                    new_notes.append(old_notes[i])
-                else:
-                    new_statuses.append("not_started")
-                    new_notes.append("")
+            # Map old steps to their indices
+            old_step_map = {}
+            current_index = 0
+            for section in old_sections:
+                for step in section["steps"]:
+                    old_step_map[step] = current_index
+                    current_index += 1
 
-            plan["steps"] = steps
+            # Create new statuses and notes, preserving existing ones where possible
+            for section in sections:
+                for step in section["steps"]:
+                    if step in old_step_map:
+                        old_idx = old_step_map[step]
+                        new_statuses.append(old_statuses[old_idx])
+                        new_notes.append(old_notes[old_idx])
+                    else:
+                        new_statuses.append("not_started")
+                        new_notes.append("")
+
+            plan["sections"] = sections
             plan["step_statuses"] = new_statuses
             plan["step_notes"] = new_notes
 
@@ -232,7 +266,7 @@ class PlanningTool(BaseTool):
             completed = sum(
                 1 for status in plan["step_statuses"] if status == "completed"
             )
-            total = len(plan["steps"])
+            total = sum(len(section["steps"]) for section in plan["sections"])
             progress = f"{completed}/{total} steps completed"
             output += f"• {plan_id}{current_marker}: {plan['title']} - {progress}\n"
 
@@ -310,10 +344,11 @@ class PlanningTool(BaseTool):
             raise ToolError("Parameter `step_index` is required for command: mark_step")
 
         plan = self.plans[plan_id]
+        total_steps = sum(len(section["steps"]) for section in plan["sections"])
 
-        if step_index < 0 or step_index >= len(plan["steps"]):
+        if step_index < 0 or step_index >= total_steps:
             raise ToolError(
-                f"Invalid step_index: {step_index}. Valid indices range from 0 to {len(plan['steps'])-1}."
+                f"Invalid step_index: {step_index}. Valid indices range from 0 to {total_steps-1}."
             )
 
         if step_status and step_status not in [
@@ -370,7 +405,7 @@ class PlanningTool(BaseTool):
         output += "=" * len(output) + "\n\n"
 
         # Calculate progress statistics
-        total_steps = len(plan["steps"])
+        total_steps = sum(len(section["steps"]) for section in plan["sections"])
         completed = sum(1 for status in plan["step_statuses"] if status == "completed")
         in_progress = sum(
             1 for status in plan["step_statuses"] if status == "in_progress"
@@ -388,21 +423,27 @@ class PlanningTool(BaseTool):
             output += "(0%)\n"
 
         output += f"Status: {completed} completed, {in_progress} in progress, {blocked} blocked, {not_started} not started\n\n"
-        output += "Steps:\n"
 
-        # Add each step with its status and notes
-        for i, (step, status, notes) in enumerate(
-            zip(plan["steps"], plan["step_statuses"], plan["step_notes"])
-        ):
-            status_symbol = {
-                "not_started": "[ ]",
-                "in_progress": "[→]",
-                "completed": "[✓]",
-                "blocked": "[!]",
-            }.get(status, "[ ]")
+        # Add each section with its steps
+        current_step_index = 0
+        for section in plan["sections"]:
+            output += f"## {section['title']}\n"
+            for step in section["steps"]:
+                status = plan["step_statuses"][current_step_index]
+                notes = plan["step_notes"][current_step_index]
+                
+                status_symbol = {
+                    "not_started": "[ ]",
+                    "in_progress": "[→]",
+                    "completed": "[✓]",
+                    "blocked": "[!]",
+                }.get(status, "[ ]")
 
-            output += f"{i}. {status_symbol} {step}\n"
-            if notes:
-                output += f"   Notes: {notes}\n"
+                output += f"  {status_symbol} {step}\n"
+                if notes:
+                    output += f"     Notes: {notes}\n"
+                
+                current_step_index += 1
+            output += "\n"
 
         return output

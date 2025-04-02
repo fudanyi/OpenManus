@@ -158,6 +158,7 @@ class PlanningFlow(BaseFlow):
         # Create a system message for plan creation
         system_message = Message.system_message(
             "You are a planning assistant. Create a concise, actionable plan with clear steps. "
+            "Do not overthink for simple tasks."
             "Focus on key milestones rather than detailed sub-steps. "
             "Optimize for clarity and efficiency."
         )
@@ -178,6 +179,14 @@ class PlanningFlow(BaseFlow):
             system_msgs=[system_message],
             tools=[self.planning_tool.to_param()],
             tool_choice=ToolChoice.AUTO,
+        )
+
+        Output.print(
+            type="chat",
+            data={
+                "sender": "assistant",
+                "message": response.content,
+            }   
         )
 
         # Process tool calls if present
@@ -235,53 +244,28 @@ class PlanningFlow(BaseFlow):
         try:
             # Direct access to plan data from planning tool storage
             plan_data = self.planning_tool.plans[self.active_plan_id]
-            steps = plan_data.get("steps", [])
+            sections = plan_data.get("sections", [])
             step_statuses = plan_data.get("step_statuses", [])
 
             # Find first non-completed step
-            for i, step in enumerate(steps):
-                if i >= len(step_statuses):
-                    status = PlanStepStatus.NOT_STARTED.value
-                else:
-                    status = step_statuses[i]
+            current_index = 0
+            for section in sections:
+                for step in section["steps"]:
+                    if current_index >= len(step_statuses):
+                        logger.warning("Step statuses array shorter than steps")
+                        return None, None
+                    
+                    if step_statuses[current_index] != "completed":
+                        return current_index, {
+                            "section_title": section["title"],
+                            "step": step,
+                            "status": step_statuses[current_index],
+                        }
+                    current_index += 1
 
-                if status in PlanStepStatus.get_active_statuses():
-                    # Extract step type/category if available
-                    step_info = {"text": step}
-
-                    # Try to extract step type from the text (e.g., [SEARCH] or [CODE])
-                    import re
-
-                    type_match = re.search(r"\[([A-Z_]+)\]", step)
-                    if type_match:
-                        step_info["type"] = type_match.group(1).lower()
-
-                    # Mark current step as in_progress
-                    try:
-                        await self.planning_tool.execute(
-                            command="mark_step",
-                            plan_id=self.active_plan_id,
-                            step_index=i,
-                            step_status=PlanStepStatus.IN_PROGRESS.value,
-                        )
-                    except Exception as e:
-                        logger.warning(f"Error marking step as in_progress: {e}")
-                        # Update step status directly if needed
-                        if i < len(step_statuses):
-                            step_statuses[i] = PlanStepStatus.IN_PROGRESS.value
-                        else:
-                            while len(step_statuses) < i:
-                                step_statuses.append(PlanStepStatus.NOT_STARTED.value)
-                            step_statuses.append(PlanStepStatus.IN_PROGRESS.value)
-
-                        plan_data["step_statuses"] = step_statuses
-
-                    return i, step_info
-
-            return None, None  # No active step found
-
+            return None, None  # All steps completed
         except Exception as e:
-            logger.warning(f"Error finding current step index: {e}")
+            logger.error(f"Error getting current step info: {e}")
             return None, None
 
     async def _execute_step(self, executor: BaseAgent, step_info: dict) -> str:
@@ -363,14 +347,17 @@ class PlanningFlow(BaseFlow):
 
             plan_data = self.planning_tool.plans[self.active_plan_id]
             title = plan_data.get("title", "Untitled Plan")
-            steps = plan_data.get("steps", [])
+            sections = plan_data.get("sections", [])
             step_statuses = plan_data.get("step_statuses", [])
             step_notes = plan_data.get("step_notes", [])
 
+            # Calculate total steps
+            total_steps = sum(len(section["steps"]) for section in sections)
+
             # Ensure step_statuses and step_notes match the number of steps
-            while len(step_statuses) < len(steps):
+            while len(step_statuses) < total_steps:
                 step_statuses.append(PlanStepStatus.NOT_STARTED.value)
-            while len(step_notes) < len(steps):
+            while len(step_notes) < total_steps:
                 step_notes.append("")
 
             # Count steps by status
@@ -381,37 +368,37 @@ class PlanningFlow(BaseFlow):
                     status_counts[status] += 1
 
             completed = status_counts[PlanStepStatus.COMPLETED.value]
-            total = len(steps)
-            progress = (completed / total) * 100 if total > 0 else 0
+            progress = (completed / total_steps) * 100 if total_steps > 0 else 0
 
             plan_text = f"Plan: {title} (ID: {self.active_plan_id})\n"
             plan_text += "=" * len(plan_text) + "\n\n"
 
             plan_text += (
-                f"Progress: {completed}/{total} steps completed ({progress:.1f}%)\n"
+                f"Progress: {completed}/{total_steps} steps completed ({progress:.1f}%)\n"
             )
             plan_text += f"Status: {status_counts[PlanStepStatus.COMPLETED.value]} completed, {status_counts[PlanStepStatus.IN_PROGRESS.value]} in progress, "
             plan_text += f"{status_counts[PlanStepStatus.BLOCKED.value]} blocked, {status_counts[PlanStepStatus.NOT_STARTED.value]} not started\n\n"
-            plan_text += "Steps:\n"
 
-            status_marks = PlanStepStatus.get_status_marks()
-
-            for i, (step, status, notes) in enumerate(
-                zip(steps, step_statuses, step_notes)
-            ):
-                # Use status marks to indicate step status
-                status_mark = status_marks.get(
-                    status, status_marks[PlanStepStatus.NOT_STARTED.value]
-                )
-
-                plan_text += f"{i}. {status_mark} {step}\n"
-                if notes:
-                    plan_text += f"   Notes: {notes}\n"
+            # Add each section with its steps
+            current_step_index = 0
+            for section in sections:
+                plan_text += f"## {section['title']}\n"
+                for step in section["steps"]:
+                    status = step_statuses[current_step_index]
+                    notes = step_notes[current_step_index]
+                    
+                    status_symbol = PlanStepStatus.get_status_marks().get(status, "[ ]")
+                    plan_text += f"  {status_symbol} {step}\n"
+                    if notes:
+                        plan_text += f"     Notes: {notes}\n"
+                    
+                    current_step_index += 1
+                plan_text += "\n"
 
             return plan_text
         except Exception as e:
-            logger.error(f"Error generating plan text from storage: {e}")
-            return f"Error: Unable to retrieve plan with ID {self.active_plan_id}"
+            logger.error(f"Error generating plan text: {e}")
+            return f"Error generating plan text: {str(e)}"
 
     async def _finalize_plan(self) -> str:
         """Finalize the plan and provide a summary using the flow's LLM directly."""

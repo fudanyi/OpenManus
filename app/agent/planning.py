@@ -168,63 +168,59 @@ class PlanningAgent(ToolCallAgent):
 
     async def _get_current_step_index(self) -> Optional[int]:
         """
-        Parse the current plan to identify the first non-completed step's index.
+        Get the index of the current step to execute.
         Returns None if no active step is found.
         """
         if not self.active_plan_id:
             return None
 
-        plan = await self.get_plan()
-
         try:
-            plan_lines = plan.splitlines()
-            steps_index = -1
-
-            # Find the index of the "Steps:" line
-            for i, line in enumerate(plan_lines):
-                if line.strip() == "Steps:":
-                    steps_index = i
-                    break
-
-            if steps_index == -1:
+            # Get the current plan
+            result = await self.available_tools.execute(
+                name="planning",
+                tool_input={"command": "get", "plan_id": self.active_plan_id},
+            )
+            if not hasattr(result, "output"):
                 return None
 
-            # Find the first non-completed step
-            for i, line in enumerate(plan_lines[steps_index + 1:], start=0):
-                if "[ ]" in line or "[→]" in line:  # not_started or in_progress
+            # Parse the plan data
+            plan_data = self.planning_tool.plans[self.active_plan_id]
+            sections = plan_data.get("sections", [])
+            step_statuses = plan_data.get("step_statuses", [])
 
-                    Output.print(
-                        type="executePlan",
-                        text=f"Executed plan {self.active_plan_id} step {i}",
-                        data={
-                            "stepIndex": i,
-                            "planId": self.active_plan_id,
-                            "status": "in_progress",
-                        },
-                    )
+            # Find first non-completed step
+            current_index = 0
+            for section in sections:
+                for step in section["steps"]:
+                    if current_index >= len(step_statuses):
+                        logger.warning("Step statuses array shorter than steps")
+                        return None
+                    
+                    if step_statuses[current_index] in ["not_started", "in_progress"]:
+                        # Mark current step as in_progress
+                        await self.available_tools.execute(
+                            name="planning",
+                            tool_input={
+                                "command": "mark_step",
+                                "plan_id": self.active_plan_id,
+                                "step_index": current_index,
+                                "step_status": "in_progress",
+                            },
+                        )
 
-                    # Mark current step as in_progress
-                    await self.available_tools.execute(
-                        name="planning",
-                        tool_input={
-                            "command": "mark_step",
-                            "plan_id": self.active_plan_id,
-                            "step_index": i,
-                            "step_status": "in_progress",
-                        },
-                    )
+                        Output.print(
+                            type="executePlan",
+                            text=f"Executed plan {self.active_plan_id} step {current_index}",
+                            data={
+                                "stepIndex": current_index,
+                                "planId": self.active_plan_id,
+                                "status": "in_progress",
+                            },
+                        )
 
-                    Output.print(
-                        type="executePlan",
-                        text=f"Executed plan {self.active_plan_id} step {i}",
-                        data={
-                            "stepIndex": i,
-                            "planId": self.active_plan_id,
-                            "status": "completed",
-                        },
-                    )
-
-                    return i
+                        return current_index
+                    
+                    current_index += 1
 
             return None  # No active step found
         except Exception as e:
