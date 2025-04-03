@@ -16,6 +16,7 @@ from app.tool.web_search import WebSearch
 from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
 from extensions.tool.human_input import HumanInput
+from extensions.tool.final_result import FinalResult
 
 
 class DataAnalyst(ToolCallAgent):
@@ -50,6 +51,7 @@ class DataAnalyst(ToolCallAgent):
             StrReplaceEditor(),
             FileSaver(),
             Bash(),
+            FinalResult(),
             # Terminal(),
         )
     )

@@ -11,8 +11,8 @@ NEXT_STEP_PROMPT = """
 Based on the data analysis task at hand, select the most appropriate tool(not mention tool by name). Highlight important words using markdown.
 - PythonExecute tool is used for data analysis and visualization tasks.
 - Use human_input tool to get feedback of a problem, or after making an analysis plan, or other cases that you think need human input.
-- If you haven't, break down complex analyses into clear steps after doing basic check on data schema.
 - You can leverage the DataSource tool to query, create, and manage external datasources.
 - After each step, explain what you've found and what the next analytical step should be.
 - Upon finishing a single step of a plan, use Terminate tool to finish the step and transition to next step.
+- If you have finished all the steps, use FinalResult tool to generate the final report/result.
 """

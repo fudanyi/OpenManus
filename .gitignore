@@ -201,3 +201,4 @@ cython_debug/
 # node
 node_modules
 sessions/
+package-lock.json
