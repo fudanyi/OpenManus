@@ -2,8 +2,8 @@ from app.logger import logger
 from app.tool.base import BaseTool
 from extensions.output import Output
 
-_TERMINATE_DESCRIPTION = """Terminate the interaction when user asks for end the task OR when the request is met of current step OR if the assistant cannot proceed further with the task.
-When user asks for end the task, call this tool to end the work.
+_TERMINATE_DESCRIPTION = """Terminate the interaction when user asks for quit the task OR when the request is met of current step OR if the assistant cannot proceed further with the task.
+When user asks for quit the task, call this tool to end the work.
 When you have finished all the tasks, call this tool to end the work.
 When you cannot proceed further with the task, call this tool to end the work.
 """
