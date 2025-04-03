@@ -65,8 +65,8 @@ The tool accepts content and a file path, and saves the content to that location
 
             Output.print(
                 type="fileSaver",
-                text=f"Content successfully saved to {file_name}",
-                data={"file_path": file_name},
+                text=f"Content successfully saved to {os.path.relpath(file_path)}",
+                data={"file_path": os.path.relpath(file_path)},
             )
 
             return f"Content successfully saved to {file_name}"

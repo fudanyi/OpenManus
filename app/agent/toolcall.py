@@ -269,6 +269,13 @@ class ToolCallAgent(ReActAgent):
             # Execute the tool
             logger.info(f"🔧 Activating tool: '{name}'...")
 
+            # DEMO HACK: Convert paths to relative for certain tools
+            args_to_print = args.copy() if isinstance(args, dict) else {}
+            if name == "file_saver" and isinstance(args, dict) and "file_path" in args:
+                args_to_print["file_path"] = os.path.basename(args["file_path"])
+            elif name == "str_replace_editor" and isinstance(args, dict) and "path" in args:
+                args_to_print["path"] = os.path.basename(args["path"])
+
             Output.print(
                 type="execute",
                 text=f"🔧 Activating tool '{name}'...",
@@ -276,7 +283,7 @@ class ToolCallAgent(ReActAgent):
                     "status": "executing",
                     "id": command.id,
                     "name": name,
-                    "arguments": args,
+                    "arguments": args_to_print,
                 },
             )
 
