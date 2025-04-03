@@ -65,10 +65,10 @@ The tool accepts content and a file path, and saves the content to that location
 
             Output.print(
                 type="fileSaver",
-                text=f"Content successfully saved to {full_path}",
-                data={"file_path": full_path},
+                text=f"Content successfully saved to {file_name}",
+                data={"file_path": file_name},
             )
 
-            return f"Content successfully saved to {full_path}"
+            return f"Content successfully saved to {file_name}"
         except Exception as e:
             return f"Error saving file: {str(e)}"
