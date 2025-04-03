@@ -143,15 +143,15 @@ class ToolCallAgent(ReActAgent):
         # Log response info
         logger.info(f"✨ {self.name}'s thoughts: {content}")
 
-        Output.print(
-            type="chat",
-            text=f"✨ {self.name}'s thoughts: {content}",
-            data={
-                "sender": "assistant",
-                "agent": self.name,
-                "message": f"{content}",
-            },
-        )
+        # Output.print(
+        #     type="chat",
+        #     text=f"✨ {self.name}'s thoughts: {content}",
+        #     data={
+        #         "sender": "assistant",
+        #         "agent": self.name,
+        #         "message": f"{content}",
+        #     },
+        # )
 
         logger.info(
             f"🛠️ {self.name} selected {len(tool_calls) if tool_calls else 0} tools to use"

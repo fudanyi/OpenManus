@@ -181,14 +181,14 @@ class PlanningFlow(BaseFlow):
             tool_choice=ToolChoice.AUTO,
         )
 
-        Output.print(
-            type="chat",
-            text=response.content,
-            data={
-                "sender": "assistant",
-                "message": response.content,
-            }   
-        )
+        # Output.print(
+        #     type="chat",
+        #     text=response.content,
+        #     data={
+        #         "sender": "assistant",
+        #         "message": response.content,
+        #     }
+        # )
 
         # Process tool calls if present
         if response.tool_calls:
@@ -255,7 +255,7 @@ class PlanningFlow(BaseFlow):
                     if current_index >= len(step_statuses):
                         logger.warning("Step statuses array shorter than steps")
                         return None, None
-                    
+
                     if step_statuses[current_index] != "completed":
                         return current_index, {
                             "section_title": section["title"],
@@ -387,12 +387,12 @@ class PlanningFlow(BaseFlow):
                 for step in section["steps"]:
                     status = step_statuses[current_step_index]
                     notes = step_notes[current_step_index]
-                    
+
                     status_symbol = PlanStepStatus.get_status_marks().get(status, "[ ]")
                     plan_text += f"  {status_symbol} {step}\n"
                     if notes:
                         plan_text += f"     Notes: {notes}\n"
-                    
+
                     current_step_index += 1
                 plan_text += "\n"
 

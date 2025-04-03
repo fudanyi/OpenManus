@@ -815,16 +815,16 @@ class LLM:
                         },
                     )
 
-            Output.print(
-                type="streaming",
-                text=completion_text,
-                data={
-                    "sender": "assistant",
-                    "message_id": chunk.id,
-                    "message": completion_text,
-                    "completed": True,
-                },
-            )
+            if completion_text:
+                Output.print(
+                    type="chat",
+                    text=completion_text,
+                    data={
+                        "sender": "assistant",
+                        "message_id": chunk.id,
+                        "message": completion_text,
+                    },
+                )
 
             # combine all messages
             tool_calls_dict = {}

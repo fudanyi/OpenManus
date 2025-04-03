@@ -32,7 +32,6 @@ class HumanInput(BaseTool):
     async def execute(
         self,
         prompt: str,
-        type: str,
         default: Optional[str] = None,
     ) -> ToolResult:
         """
@@ -51,7 +50,6 @@ class HumanInput(BaseTool):
                 text=f"{prompt}",
                 data={
                     "sender": "assistant",
-                    "type": type,
                     "message": prompt,
                 },
             )
