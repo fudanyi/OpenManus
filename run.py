@@ -30,7 +30,6 @@ async def run_flow(session_id: str):
         # 如果有session文件，则读取
         if has_session(session_id):
             prompt = ""
-            start_time = time.time()
             flow = load_flow_from_session(session_id, FlowType.PLANNING, agents)
         # 如果没有session文件，则创建
         else:
@@ -68,8 +67,8 @@ async def run_flow(session_id: str):
                 timeout=3600,  # 60 minute timeout for the entire execution
             )
             elapsed_time = time.time() - start_time
-            logger.info(f"Request processed in {elapsed_time:.2f} seconds")
             logger.info(result)
+            logger.info(f"Request processed in {elapsed_time:.2f} seconds")
 
             Output.print(
                 type="chat",
@@ -78,6 +77,11 @@ async def run_flow(session_id: str):
                     "sender": "assistant",
                     "message": result,
                 },
+            )
+
+            Output.print(
+                type="mainCompleted",
+                text=f"Request processing completed in {elapsed_time:.2f} seconds.",
             )
 
         except asyncio.TimeoutError:
@@ -93,11 +97,6 @@ async def run_flow(session_id: str):
         finally:
             # 保存session
             save_flow_to_session(session_id, flow)
-
-        Output.print(
-            type="mainCompleted",
-            text=f"Request processing completed in {elapsed_time:.2f} seconds.",
-        )
 
     except KeyboardInterrupt:
         logger.info("Operation cancelled by user.")
