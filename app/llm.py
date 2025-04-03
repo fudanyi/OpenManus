@@ -1,5 +1,6 @@
 import base64
 import math
+import time
 from typing import Dict, List, Optional, Union
 
 import tiktoken
@@ -12,6 +13,10 @@ from openai import (
     RateLimitError,
 )
 from openai.types.chat.chat_completion_message import ChatCompletionMessage
+from openai.types.chat.chat_completion_message_tool_call import (
+    ChatCompletionMessageToolCall,
+    Function,
+)
 from tenacity import (
     retry,
     retry_if_exception_type,
@@ -30,7 +35,7 @@ from app.schema import (
     Message,
     ToolChoice,
 )
-
+from extensions.output import Output
 
 REASONING_MODELS = ["o1", "o3-mini"]
 MULTIMODAL_MODELS = [
@@ -358,7 +363,7 @@ class LLM:
             if msg["role"] not in ROLE_VALUES:
                 raise ValueError(f"Invalid role: {msg['role']}")
 
-        #BUG: may have bug to wrongly remove duplicate human inputs or human inputted images, need fixing
+        # BUG: may have bug to wrongly remove duplicate human inputs or human inputted images, need fixing
 
         # Filter: remove image data except current image think request(last message)
         for msg in formatted_messages[:-1]:
@@ -369,7 +374,8 @@ class LLM:
                 elif isinstance(msg["content"], list):
                     # Extract all text content and combine into single string
                     text_content = " ".join(
-                        item["text"] for item in msg["content"] 
+                        item["text"]
+                        for item in msg["content"]
                         if isinstance(item, dict) and item.get("type") == "text"
                     )
                     # Replace content with combined text string
@@ -379,20 +385,22 @@ class LLM:
         # Get the last message's content
         last_msg = formatted_messages[-1]
         last_content = ""
-        
+
         # Extract text content from last message(should be a next prompt in REACT)
         if last_msg.get("role") == "user" and isinstance(last_msg.get("content"), str):
             last_content = last_msg["content"]
-        elif last_msg.get("role") == "user" and isinstance(last_msg.get("content"), list):
+        elif last_msg.get("role") == "user" and isinstance(
+            last_msg.get("content"), list
+        ):
             last_content = " ".join(
-                item["text"] for item in last_msg["content"]
+                item["text"]
+                for item in last_msg["content"]
                 if isinstance(item, dict) and item.get("type") == "text"
             )
-        
+
         # Filter out messages with duplicate content
         formatted_messages = [
-            msg for msg in formatted_messages[:-1]
-            if msg.get("content") != last_content
+            msg for msg in formatted_messages[:-1] if msg.get("content") != last_content
         ] + [last_msg]
 
         return formatted_messages
@@ -650,6 +658,8 @@ class LLM:
 
             collected_messages = []
             async for chunk in response:
+                if chunk.choices == None:
+                    continue
                 chunk_message = chunk.choices[0].delta.content or ""
                 collected_messages.append(chunk_message)
                 print(chunk_message, end="", flush=True)
@@ -774,22 +784,80 @@ class LLM:
                     temperature if temperature is not None else self.temperature
                 )
 
-            response: ChatCompletion = await self.client.chat.completions.create(
-                **params, stream=False
+            # response: ChatCompletion = await self.client.chat.completions.create(
+            #     **params, stream=False
+            # )
+
+            # Streaming request
+            self.update_token_count(input_tokens)
+            response_stream = await self.client.chat.completions.create(
+                **params, stream=True
             )
 
-            # Check if response is valid
-            if not response.choices or not response.choices[0].message:
-                print(response)
-                # raise ValueError("Invalid or empty response from LLM")
-                return None
+            collected_messages = []
+            completion_text = ""
+            async for chunk in response_stream:
+                if chunk.choices == None:
+                    continue
+                chunk_message = chunk.choices[0].delta.content or ""
+                completion_text += chunk_message
+                collected_messages.append(chunk.choices[0])
 
-            # Update token counts
-            self.update_token_count(
-                response.usage.prompt_tokens, response.usage.completion_tokens
+                if chunk_message:
+                    Output.print(
+                        type="streaming",
+                        text=chunk_message,
+                        data={
+                            "sender": "assistant",
+                            "message_id": chunk.id,
+                            "message": chunk_message,
+                            "completed": False,
+                        },
+                    )
+
+            Output.print(
+                type="streaming",
+                text=completion_text,
+                data={
+                    "sender": "assistant",
+                    "message_id": chunk.id,
+                    "message": completion_text,
+                    "completed": True,
+                },
             )
 
-            return response.choices[0].message
+            # combine all messages
+            tool_calls_dict = {}
+            for c in collected_messages:
+                if c.delta.tool_calls:
+                    if c.delta.tool_calls[0].index not in tool_calls_dict:
+                        tool_calls_dict[c.delta.tool_calls[0].index] = (
+                            ChatCompletionMessageToolCall(
+                                id=c.delta.tool_calls[0].id,
+                                type=c.delta.tool_calls[0].type,
+                                function=Function(
+                                    arguments=c.delta.tool_calls[0].function.arguments,
+                                    name=c.delta.tool_calls[0].function.name,
+                                ),
+                            )
+                        )
+                    else:
+                        tool_call = tool_calls_dict[c.delta.tool_calls[0].index]
+                        tool_call.function.arguments += (
+                            c.delta.tool_calls[0].function.arguments
+                            if c.delta.tool_calls[0].function.arguments
+                            else ""
+                        )
+
+            message = ChatCompletionMessage(
+                role="assistant",
+                content=completion_text,
+                tool_calls=(
+                    list(tool_calls_dict.values()) if len(tool_calls_dict) > 0 else None
+                ),
+            )
+
+            return message
 
         except TokenLimitExceeded:
             # Re-raise token limit errors without logging
@@ -849,7 +917,11 @@ class LLM:
             if isinstance(images, str):
                 images = [images]
 
-            for img in [img for img in images if str(img).lower().endswith(('.png', '.jpg', '.jpeg', '.gif', '.webp'))]:
+            for img in [
+                img
+                for img in images
+                if str(img).lower().endswith((".png", ".jpg", ".jpeg", ".gif", ".webp"))
+            ]:
                 if isinstance(img, str):
                     # Read local file and encode as base64
                     with open(img, "rb") as f:
