@@ -81,6 +81,7 @@ class PythonExecute(BaseTool):
         code: str,
         output_files: list,
         charts: list,
+        toolcall_id: str | None = None,
         timeout: int = 150,
     ) -> Dict:
         """
@@ -90,6 +91,8 @@ class PythonExecute(BaseTool):
             code (str): The Python code to execute.
             timeout (int): Execution timeout in seconds.
             output_files (list): The files to output.
+            charts (list): The charts to output.
+            toolcall_id (str | None): The toolcall id.
         Returns:
             Dict: Contains 'output' with execution output or error message and 'success' status.
         """
@@ -138,15 +141,17 @@ class PythonExecute(BaseTool):
                 if "observation" in result and result["observation"] != last_output:
                     # 去掉已经输出过的，只保留新增内容
                     new_output = result["observation"][len(last_output):]
-                    Output.print(
-                        type="python_execute_streaming",
-                        text=new_output,
-                        data={
-                            "sender": "assistant",
-                            "message": new_output,
-                            "completed": False,
-                        },
-                    )
+                    if new_output:
+                        Output.print(
+                            type="python_execute_streaming",
+                            text=new_output,
+                            data={
+                                "sender": "assistant",
+                                "message": new_output,
+                                "tool_id": toolcall_id,
+                                "completed": False,
+                            },
+                        )
                     last_output = result["observation"]
 
             return dict(result)

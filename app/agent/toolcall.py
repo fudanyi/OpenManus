@@ -287,6 +287,9 @@ class ToolCallAgent(ReActAgent):
                 },
             )
 
+            if name == "python_execute":
+                args["toolcall_id"] = command.id
+
             result = await self.available_tools.execute(name=name, tool_input=args)
 
             # Handle special tools
