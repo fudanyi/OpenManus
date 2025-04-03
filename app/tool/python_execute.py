@@ -1,9 +1,11 @@
 import multiprocessing
 import sys
+import time
 from io import StringIO
 from typing import Dict
 
 from app.tool.base import BaseTool
+from extensions.output import Output
 
 
 class PythonExecute(BaseTool):
@@ -29,26 +31,26 @@ class PythonExecute(BaseTool):
                 },
             },
             "charts": {
-                "type": "array", 
+                "type": "array",
                 "description": "The charts to output.",
                 "items": {
                     "type": "object",
                     "properties": {
                         "name": {
                             "type": "string",
-                            "description": "The name of the chart"
+                            "description": "The name of the chart",
                         },
                         "image_file": {
-                            "type": "string", 
-                            "description": "The output image file path"
+                            "type": "string",
+                            "description": "The output image file path",
                         },
                         "config_file": {
                             "type": "string",
-                            "description": "The chart configuration JSON's file path"
-                        }
+                            "description": "The chart configuration JSON's file path",
+                        },
                     },
-                    "required": ["name", "image_file", "config_file"]
-                }
+                    "required": ["name", "image_file", "config_file"],
+                },
             },
         },
         "required": ["code", "output_files", "charts"],
@@ -57,11 +59,15 @@ class PythonExecute(BaseTool):
     def _run_code(self, code: str, result_dict: dict, safe_globals: dict) -> None:
         original_stdout = sys.stdout
         try:
-            output_buffer = StringIO()
+            class RealtimeStringIO(StringIO):
+                def write(self, s):
+                    super().write(s)
+                    result_dict["observation"] = self.getvalue()
+                    result_dict["success"] = True
+
+            output_buffer = RealtimeStringIO()
             sys.stdout = output_buffer
             exec(code, safe_globals, safe_globals)
-            result_dict["observation"] = output_buffer.getvalue()
-            result_dict["success"] = True
         except Exception as e:
             result_dict["observation"] = str(e)
             result_dict["success"] = False
@@ -93,12 +99,17 @@ class PythonExecute(BaseTool):
         for chart in charts:
             chart_files.add(chart["image_file"])
             chart_files.add(chart["config_file"])
-        
+
         output_files = [f for f in output_files if f not in chart_files]
 
         with multiprocessing.Manager() as manager:
             result = manager.dict(
-                {"observation": "", "success": False, "output_files": output_files, "charts": charts}
+                {
+                    "observation": "",
+                    "success": False,
+                    "output_files": output_files,
+                    "charts": charts,
+                }
             )
             if isinstance(__builtins__, dict):
                 safe_globals = {"__builtins__": __builtins__}
@@ -108,16 +119,34 @@ class PythonExecute(BaseTool):
                 target=self._run_code, args=(code, result, safe_globals)
             )
             proc.start()
-            proc.join(timeout)
 
-            # timeout process
-            if proc.is_alive():
-                proc.terminate()
-                proc.join(1)
-                return {
-                    "observation": f"Execution timeout after {timeout} seconds",
-                    "success": False,
-                    "output_files": output_files,
-                    "charts": charts,
-                }
+            # 实时读取输出并通过Output.print输出
+            last_output = ""
+            start_time = time.time()
+            while proc.is_alive():
+                if time.time() - start_time > timeout:
+                    proc.terminate()
+                    proc.join(1)
+                    return {
+                        "observation": f"Execution timeout after {timeout} seconds",
+                        "success": False,
+                        "output_files": output_files,
+                        "charts": charts,
+                    }
+
+                time.sleep(0.1)  # 避免过于频繁的检查
+                if "observation" in result and result["observation"] != last_output:
+                    # 去掉已经输出过的，只保留新增内容
+                    new_output = result["observation"][len(last_output):]
+                    Output.print(
+                        type="python_execute_streaming",
+                        text=new_output,
+                        data={
+                            "sender": "assistant",
+                            "message": new_output,
+                            "completed": False,
+                        },
+                    )
+                    last_output = result["observation"]
+
             return dict(result)
