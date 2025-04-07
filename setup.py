@@ -36,6 +36,8 @@ setup(
         "pandas~=2.2.3",
         "matplotlib~=3.10.1",
         "seaborn~=0.13.2",
+        "plotly~=5.22.0",
+        "streamlit~=1.29.0",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
