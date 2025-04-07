@@ -273,7 +273,7 @@ class PlanningFlow(BaseFlow):
         """Execute the current step with the specified agent using agent.run()."""
         # Prepare context for the agent with current plan status
         plan_status = await self._get_plan_text()
-        step_text = step_info.get("text", f"Step {self.current_step_index}")
+        step_text = step_info.get("step")
 
         # Create a prompt for the agent to execute the current step
         step_prompt = f"""
