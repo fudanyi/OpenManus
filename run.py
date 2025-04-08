@@ -21,6 +21,9 @@ async def run_flow(session_id: str):
         "dataAnalyst": DataAnalyst(),
     }
 
+    # Set session ID for output
+    Output.set_session_id(session_id)
+
     try:
         Output.print(
             type="mainStart",

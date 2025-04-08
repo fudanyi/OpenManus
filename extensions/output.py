@@ -36,6 +36,19 @@ class Output:
     data: 消息数据，用于存储实际数据
     """
 
+    # Class variable to store current session ID
+    _current_session_id = None
+
+    @classmethod
+    def set_session_id(cls, session_id: str):
+        """
+        Set the current session ID for output
+        """
+        cls._current_session_id = session_id
+        # Ensure sessions directory exists
+        sessions_path = PROJECT_ROOT / "sessions"
+        sessions_path.mkdir(exist_ok=True)
+
     @classmethod
     def print(self, type: str, text: str, data: dict = None):
         """
@@ -46,7 +59,7 @@ class Output:
         output_str = json.dumps(output, cls=CustomJSONEncoder)
         print(output_str, flush=True)
 
-        # 同时写入文件到 logs/{datetime}.output
+        # 写入文件到 logs/{datetime}.output
         current_date = datetime.now()
         formatted_date = current_date.strftime("%Y%m%d")
         log_path = PROJECT_ROOT / "logs"
@@ -57,6 +70,16 @@ class Output:
             except Exception:
                 # logger.error(f"Error writing to output file: {e}")
                 pass
+
+        # 如果设置了session_id，同时写入到sessions/{session_id}.out
+        if self._current_session_id:
+            sessions_path = PROJECT_ROOT / "sessions"
+            with open(sessions_path / f"{self._current_session_id}.out", "a", encoding="utf-8") as f:
+                try:
+                    f.write(output_str + ",\n")
+                except Exception:
+                    # logger.error(f"Error writing to session file: {e}")
+                    pass
 
     @classmethod
     def _pack(self, type: str, text: str, data: dict = None):
