@@ -209,11 +209,83 @@ class PlanningFlow(BaseFlow):
                         plan_text += "\n您觉得我的计划怎么样？如果有什么问题，请告诉我。如果觉得我的计划还不错，那我们就按照这个计划执行啦~~\n"
 
                 # ask user for confirmation
+                # {
+                #     "id": "66bd3c68-10e0-49b0-b9dc-5fb3629317d8",
+                #     "type": "execute",
+                #     "timestamp": 1743657699874,
+                #     "text": "\ud83d\udd27 Activating tool 'human_input'...",
+                #     "data": {
+                #         "status": "executing",
+                #         "id": "toolu_01KA96sG61AcBdyvqpHnBE87",
+                #         "name": "human_input",
+                #         "arguments": {
+                #             "type": "feedback",
+                #             "prompt": "I propose the following data collection and analysis plan:\n\n1. Create a structured dataset with the following columns:\n   - Breed Name\n   - Recognition Status (which organizations recognize it)\n   - Classification Category (Natural, Hybrid, Mutation, etc.)\n   - Origin/Country\n   - Physical Characteristics\n   - Recognition Year\n\n2. Collect data from each major organization:\n   - TICA recognized breeds\n   - CFA recognized breeds\n   - FIFe recognized breeds\n   - WCF recognized breeds\n\n3. Create comparative analysis:\n   - Total number of recognized breeds by each organization\n   - Overlap analysis\n   - Classification distribution\n   - Historical recognition trends\n\nDo you agree with this plan? Would you like to add or modify any aspects?",
+                #         },
+                #     },
+                # },
+                Output.print(
+                    type="execute",
+                    text="\ud83d\udd27 Activating tool 'human_input'...",
+                    data={
+                        "status": "executing",
+                        "id": "toolu_01KA96sG61AcBdyvqpHnBE87",
+                        "name": "human_input",
+                        "arguments": {
+                            "type": "feedback",
+                            "prompt": {plan_text},
+                        },
+                    },
+                )
+
                 ok_words = ["ok", "okay", "yes", "go", "确认", "是", "好", "可以"]
                 human_input = await self.humaninput_tool.execute(
                     prompt=f"{plan_text}",
                     type="confirm",
                     default="yes",
+                )
+
+                # {
+                #     "id": "eb185246-5412-4c05-999e-c7dad8e9c8b6",
+                #     "type": "execute",
+                #     "timestamp": 1744181364925,
+                #     "text": "\ud83c\udfaf Tool 'human_input' completed its mission!",
+                #     "data": {
+                #         "status": "completed",
+                #         "id": "toolu_01S8Mz8jYpXP6vGQgZJBZVCh",
+                #         "name": "human_input",
+                #         "arguments": {
+                #             "type": "feedback",
+                #             "prompt": "\u6211\u8ba1\u5212\u4ece\u4ee5\u4e0b\u51e0\u4e2a\u7ef4\u5ea6\u5206\u6790CFA\u548cFIFe\u7684\u732b\u79cd\u5206\u7c7b\u6807\u51c6\uff1a\n1. \u5206\u7c7b\u4f53\u7cfb\u5bf9\u6bd4\uff08\u5305\u62ec\u5206\u7ec4\u65b9\u5f0f\u3001\u8bc4\u5224\u6807\u51c6\u7b49\uff09\n2. \u8ba4\u8bc1\u54c1\u79cd\u6570\u91cf\u7edf\u8ba1\n3. \u4e24\u5927\u673a\u6784\u7684\u5171\u540c\u70b9\u548c\u5dee\u5f02\n4. \u5bf9\u732b\u79cd\u9009\u62e9\u7684\u5b9e\u9645\u6307\u5bfc\u610f\u4e49\n\n\u8bf7\u95ee\u8fd9\u4e2a\u5206\u6790\u6846\u67b6\u662f\u5426\u5408\u9002\uff1f\u6216\u8005\u60a8\u89c9\u5f97\u8fd8\u9700\u8981\u8865\u5145\u5176\u4ed6\u65b9\u9762\uff1f",
+                #         },
+                #         "result": {
+                #             "output": "\u5f88\u597d\uff0c\u53ef\u4ee5\u7b80\u5355\u4e00\u70b9",
+                #             "error": null,
+                #             "base64_image": null,
+                #             "system": null,
+                #         },
+                #         "base64_image": null,
+                #     },
+                # },
+                Output.print(
+                    type="execute",
+                    text="\ud83c\udfaf Tool 'human_input' completed its mission!",
+                    data={
+                        "status": "completed",
+                        "id": "toolu_01KA96sG61AcBdyvqpHnBE87",
+                        "name": "human_input",
+                        "arguments": {
+                            "type": "feedback",
+                            "prompt": {plan_text},
+                        },
+                        "result": {
+                            "output": human_input.output,
+                            "error": None,
+                            "base64_image": None,
+                            "system": None,
+                        },
+                        "base64_image": None,
+                    },
                 )
 
                 if human_input.output.strip().lower() in ok_words:
