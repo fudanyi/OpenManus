@@ -1,6 +1,7 @@
 import multiprocessing
 import sys
 import time
+import warnings
 from io import StringIO
 from typing import Dict
 
@@ -67,7 +68,11 @@ class PythonExecute(BaseTool):
 
             output_buffer = RealtimeStringIO()
             sys.stdout = output_buffer
-            exec(code, safe_globals, safe_globals)
+            
+            # 捕获警告但不将其视为错误
+            with warnings.catch_warnings():
+                warnings.simplefilter("ignore")
+                exec(code, safe_globals, safe_globals)
         except Exception as e:
             result_dict["observation"] = str(e)
             result_dict["success"] = False
@@ -109,7 +114,7 @@ class PythonExecute(BaseTool):
             result = manager.dict(
                 {
                     "observation": "",
-                    "success": False,
+                    "success": True,
                     "output_files": output_files,
                     "charts": charts,
                 }

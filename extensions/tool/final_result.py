@@ -9,6 +9,7 @@ from app.tool.base import BaseTool, ToolResult
 from pydantic import Field
 import asyncio
 import tomli
+from extensions.output import Output
 
 # Load configuration
 config_path = Path(__file__).parent.parent.parent / "config/config.toml"
