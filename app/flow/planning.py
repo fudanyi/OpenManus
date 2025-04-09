@@ -161,34 +161,66 @@ class PlanningFlow(BaseFlow):
             "Do not overthink for simple tasks."
             "Focus on key milestones rather than detailed sub-steps. "
             "Optimize for clarity and efficiency."
+            "Default working language: Chinese"
+            "Use the language specified by user in messages as the working language when explicitly provided"
+            "All thinking and responses must be in the working language"
+            "Natural language arguments in tool calls must be in the working language"
+            "Avoid using pure lists and bullet points format in any language"
         )
 
         # Create a user message with the request
         user_message = Message.user_message(
             f"Create a reasonable plan with clear steps to accomplish the task: {request}"
         )
+        user_messages = [user_message]
 
         Output.print(
             type="liveStatus",
             text="Planning",
         )
 
-        # Call LLM with PlanningTool
-        response = await self.llm.ask_tool(
-            messages=[user_message],
-            system_msgs=[system_message],
-            tools=[self.planning_tool.to_param()],
-            tool_choice=ToolChoice.AUTO,
-        )
+        while True:
+            # Call LLM with PlanningTool
+            response = await self.llm.ask_tool(
+                messages=user_messages,
+                system_msgs=[system_message],
+                tools=[self.planning_tool.to_param()],
+                tool_choice=ToolChoice.AUTO,
+            )
 
-        # Output.print(
-        #     type="chat",
-        #     text=response.content,
-        #     data={
-        #         "sender": "assistant",
-        #         "message": response.content,
-        #     }
-        # )
+            if response.tool_calls:
+                plan_text = ""
+                for tool_call in response.tool_calls:
+                    if tool_call.function.name == "planning":
+                        args = tool_call.function.arguments
+                        if isinstance(args, str):
+                            try:
+                                args = json.loads(args)
+                            except json.JSONDecodeError:
+                                logger.error(f"Failed to parse tool arguments: {args}")
+                                continue
+
+                        plan_text += f"{response.content}\n\n"
+                        plan_text += f"{args['title']}\n"
+                        for section in args["sections"]:
+                            plan_text += f"## {section['title']}\n"
+                            for step in section["steps"]:
+                                plan_text += f"[ ] {step}\n"
+                        plan_text += "\n您觉得我的计划怎么样？如果有什么问题，请告诉我。如果觉得我的计划还不错，那我们就按照这个计划执行啦~~\n"
+
+                # ask user for confirmation
+                ok_words = ["ok", "okay", "yes", "go", "确认", "是", "好", "可以"]
+                human_input = await self.humaninput_tool.execute(
+                    prompt=f"{plan_text}",
+                    type="confirm",
+                    default="yes",
+                )
+
+                if human_input.output.strip().lower() in ok_words:
+                    break
+                else:
+                    user_messages.append(Message.assistant_message(plan_text))
+                    user_messages.append(Message.user_message(human_input.output))
 
         # Process tool calls if present
         if response.tool_calls:
@@ -374,9 +406,7 @@ class PlanningFlow(BaseFlow):
             plan_text = f"Plan: {title} (ID: {self.active_plan_id})\n"
             plan_text += "=" * len(plan_text) + "\n\n"
 
-            plan_text += (
-                f"Progress: {completed}/{total_steps} steps completed ({progress:.1f}%)\n"
-            )
+            plan_text += f"Progress: {completed}/{total_steps} steps completed ({progress:.1f}%)\n"
             plan_text += f"Status: {status_counts[PlanStepStatus.COMPLETED.value]} completed, {status_counts[PlanStepStatus.IN_PROGRESS.value]} in progress, "
             plan_text += f"{status_counts[PlanStepStatus.BLOCKED.value]} blocked, {status_counts[PlanStepStatus.NOT_STARTED.value]} not started\n\n"
 

@@ -58,7 +58,9 @@ class HumanInput(BaseTool):
             )
 
             # Show prompt and get input
-            user_input = input(f"{prompt}:\n").strip()
+            if not prompt.endswith("\n"):
+                prompt += "\n"
+            user_input = input(f"{prompt}").strip()
 
             Output.print(
                 type="chat",
