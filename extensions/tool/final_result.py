@@ -8,6 +8,12 @@ import streamlit as st
 from app.tool.base import BaseTool, ToolResult
 from pydantic import Field
 import asyncio
+import tomli
+
+# Load configuration
+config_path = Path(__file__).parent.parent.parent / "config/config.toml"
+with open(config_path, "rb") as f:
+    config = tomli.load(f)
 
 class FinalResult(BaseTool):
     """Tool for generating final reports, slides, and dashboards."""
@@ -80,8 +86,7 @@ class FinalResult(BaseTool):
                 f.write(content)
             return {
                 "success": True,
-                # "output_file": str(output_path),
-                "report_url": f"http://localhost:3000/?filename={Path(output_path).stem}"
+                "report_url": f"http://{config['servers']['mdx_host']}:{config['servers']['mdx_port']}/?filename={Path(output_path).stem}&session_id={Output._current_session_id}"
             }
         except IOError as e:
             return {
@@ -131,5 +136,5 @@ class FinalResult(BaseTool):
             f.write(content)
         return {
             "success": True,
-            "dash_url": f"http://localhost:4000/?file={Path(output_path).stem}"
+            "dash_url": f"http://{config['servers']['streamlit_host']}:{config['servers']['streamlit_port']}/?file={Path(output_path).stem}&session_id={Output._current_session_id}"
         } 
