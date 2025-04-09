@@ -233,14 +233,14 @@ class PlanningFlow(BaseFlow):
                         "name": "human_input",
                         "arguments": {
                             "type": "feedback",
-                            "prompt": {plan_text},
+                            "prompt": plan_text,
                         },
                     },
                 )
 
                 ok_words = ["ok", "okay", "yes", "go", "确认", "是", "好", "可以"]
                 human_input = await self.humaninput_tool.execute(
-                    prompt=f"{plan_text}",
+                    prompt=plan_text,
                     type="confirm",
                     default="yes",
                 )
@@ -276,7 +276,7 @@ class PlanningFlow(BaseFlow):
                         "name": "human_input",
                         "arguments": {
                             "type": "feedback",
-                            "prompt": {plan_text},
+                            "prompt": plan_text,
                         },
                         "result": {
                             "output": human_input.output,
