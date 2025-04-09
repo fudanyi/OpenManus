@@ -15,13 +15,15 @@ config_path = Path(__file__).parent.parent.parent / "config/config.toml"
 with open(config_path, "rb") as f:
     config = tomli.load(f)
 
+
 class FinalResult(BaseTool):
     """Tool for generating final reports, slides, and dashboards."""
 
     name: str = "final_result"
     description: str = (
         "Generates final deliverables including reports, slides, and dashboards. "
-        + table.PROMPT + "\n"
+        + table.PROMPT
+        + "\n"
         + chart.PROMPT
     )
 
@@ -31,18 +33,18 @@ class FinalResult(BaseTool):
             "action": {
                 "type": "string",
                 "description": "The action to perform: gen_report, gen_slides, or gen_dashboard",
-                "enum": ["gen_report", "gen_slides", "gen_dashboard"]
+                "enum": ["gen_report", "gen_slides", "gen_dashboard"],
             },
             "content": {
                 "type": "string",
-                "description": "The content to process depend on action: 1. MDX for gen_report with charts using JSX component(like <InteractivePlotly config=\"chart_config.json\" />), 2. Slidev markdown for gen_slides and mermaid diagrams, 3. Streamlit python code for gen_dashboard)"
+                "description": 'The content to process depend on action: 1. MDX for gen_report with charts using JSX component(like <InteractivePlotly config="chart_config.json" />), 2. Slidev markdown for gen_slides and mermaid diagrams, 3. Streamlit python code for gen_dashboard)',
             },
             "filename": {
                 "type": "string",
-                "description": "The output filename without extension"
-            }
+                "description": "The output filename without extension",
+            },
         },
-        "required": ["action", "content", "filename"]
+        "required": ["action", "content", "filename"],
     }
 
     def __init__(self, **data):
@@ -61,7 +63,7 @@ class FinalResult(BaseTool):
             ToolResult: Contains status and output file paths
         """
         try:
-            
+
             if action == "gen_report":
                 result = await self._gen_report(content, filename)
             elif action == "gen_slides":
@@ -70,7 +72,7 @@ class FinalResult(BaseTool):
                 result = await self._gen_dashboard(content, filename)
             else:
                 return {"success": False, "error": f"Unknown action: {action}"}
-            
+
             if result.get("success", False):
                 return result
             else:
@@ -86,17 +88,14 @@ class FinalResult(BaseTool):
                 f.write(content)
             return {
                 "success": True,
-                "report_url": f"http://{config['servers']['mdx_host']}:{config['servers']['mdx_port']}/?filename={Path(output_path).stem}&session_id={Output._current_session_id}"
+                "report_url": f"http://{config['servers']['mdx_host']}:{config['servers']['mdx_port']}/?filename={Path(output_path).stem}&session_id={Output._current_session_id}",
             }
         except IOError as e:
-            return {
-                "success": False,
-                "error": f"Failed to write MDX file: {str(e)}"
-            }
+            return {"success": False, "error": f"Failed to write MDX file: {str(e)}"}
         except Exception as e:
             return {
-                "success": False, 
-                "error": f"Unexpected error generating report: {str(e)}"
+                "success": False,
+                "error": f"Unexpected error generating report: {str(e)}",
             }
 
     async def _gen_slides(self, content: str, filename: str) -> dict:
@@ -111,22 +110,20 @@ class FinalResult(BaseTool):
         pptx_path = Path(f"{filename}.pptx")
         cmd = f"slidev export --format pptx --output {filename}.pptx"
         process = await asyncio.create_subprocess_shell(
-            cmd,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE
+            cmd, stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
         )
         stdout, stderr = await process.communicate()
 
         if process.returncode != 0:
             return {
                 "success": False,
-                "error": f"Slidev export failed: {stderr.decode()}"
+                "error": f"Slidev export failed: {stderr.decode()}",
             }
 
         return {
             "success": True,
             "markdown_file": str(md_path),
-            "pptx_file": str(pptx_path)
+            "pptx_file": str(pptx_path),
         }
 
     async def _gen_dashboard(self, content: str, filename: str) -> dict:
@@ -136,5 +133,5 @@ class FinalResult(BaseTool):
             f.write(content)
         return {
             "success": True,
-            "dash_url": f"http://{config['servers']['streamlit_host']}:{config['servers']['streamlit_port']}/?file={Path(output_path).stem}&session_id={Output._current_session_id}"
-        } 
+            "dash_url": f"http://{config['servers']['streamlit_host']}:{config['servers']['streamlit_port']}/?file={Path(output_path).stem}&session_id={Output._current_session_id}",
+        }
