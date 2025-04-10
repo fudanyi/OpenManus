@@ -9,8 +9,8 @@ from app.tool.base import BaseTool
 from app.tool.search import (
     BaiduSearchEngine,
     BingSearchEngine,
-    DuckDuckGoSearchEngine,
-    GoogleSearchEngine,
+    # DuckDuckGoSearchEngine,
+    # GoogleSearchEngine,
     WebSearchEngine,
 )
 from extensions.output import Output
@@ -37,9 +37,9 @@ class WebSearch(BaseTool):
         "required": ["query"],
     }
     _search_engine: dict[str, WebSearchEngine] = {
-        "google": GoogleSearchEngine(),
+        # "google": GoogleSearchEngine(),
         "baidu": BaiduSearchEngine(),
-        "duckduckgo": DuckDuckGoSearchEngine(),
+        # "duckduckgo": DuckDuckGoSearchEngine(),
         "bing": BingSearchEngine(),
     }
 
@@ -199,7 +199,7 @@ class WebSearch(BaseTool):
         Returns:
             List[str]: Ordered list of search engine names.
         """
-        preferred = "google"
+        preferred = "bing"
         fallbacks = []
 
         if config.search_config:
