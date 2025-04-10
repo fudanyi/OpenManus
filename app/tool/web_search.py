@@ -199,7 +199,7 @@ class WebSearch(BaseTool):
         Returns:
             List[str]: Ordered list of search engine names.
         """
-        preferred = "bing"
+        preferred = "baidu"
         fallbacks = []
 
         if config.search_config:
