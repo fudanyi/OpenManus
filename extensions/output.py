@@ -8,12 +8,32 @@ from app.logger import logger
 from app.config import PROJECT_ROOT
 
 
+def clean_text(text: str) -> str:
+    """
+    Clean text by replacing invalid surrogate pairs with replacement character
+    """
+    if not isinstance(text, str):
+        return str(text)
+    try:
+        text.encode('utf-8')
+        return text
+    except UnicodeEncodeError:
+        return ''.join(c if ord(c) < 0xD800 or ord(c) > 0xDFFF else '\uFFFD' for c in text)
+
+
 class CustomJSONEncoder(json.JSONEncoder):
     def default(self, obj: Any) -> Any:
         if hasattr(obj, "__dict__"):
             # 对于有__dict__属性的对象，只序列化其__dict__
             return obj.__dict__
         return super().default(obj)
+
+    def encode(self, obj: Any) -> str:
+        if isinstance(obj, str):
+            obj = clean_text(obj)
+        elif isinstance(obj, dict):
+            obj = {k: clean_text(v) if isinstance(v, str) else v for k, v in obj.items()}
+        return super().encode(obj)
 
 
 class Output:
@@ -56,7 +76,7 @@ class Output:
         """
         output = self._pack(type, text, data)
         logger.info(output)
-        output_str = json.dumps(output, cls=CustomJSONEncoder)
+        output_str = json.dumps(output, cls=CustomJSONEncoder, ensure_ascii=False)
         print(output_str, flush=True)
 
         # 写入文件到 logs/{datetime}.output
@@ -76,7 +96,9 @@ class Output:
             sessions_path = PROJECT_ROOT / "sessions"
             with open(sessions_path / f"{self._current_session_id}.out", "a", encoding="utf-8") as f:
                 try:
-                    f.write(output_str + ",\n")
+                    # 忽略streaming类型的消息
+                    if output.get("type") != "streaming":
+                        f.write(output_str + ",\n")
                 except Exception:
                     # logger.error(f"Error writing to session file: {e}")
                     pass
