@@ -20,6 +20,10 @@ class PythonExecute(BaseTool):
     parameters: dict = {
         "type": "object",
         "properties": {
+            "title": {
+                "type": "string",
+                "description": "Short title of the task",
+            },
             "code": {
                 "type": "string",
                 "description": "The Python code to execute.",
@@ -54,7 +58,7 @@ class PythonExecute(BaseTool):
                 },
             },
         },
-        "required": ["code", "output_files", "charts"],
+        "required": ["code", "output_files", "charts", "title"],
     }
 
     def _run_code(self, code: str, result_dict: dict, safe_globals: dict) -> None:
@@ -86,6 +90,7 @@ class PythonExecute(BaseTool):
         code: str,
         output_files: list,
         charts: list,
+        title: str,
         toolcall_id: str | None = None,
         timeout: int = 150,
     ) -> Dict:
@@ -97,6 +102,7 @@ class PythonExecute(BaseTool):
             timeout (int): Execution timeout in seconds.
             output_files (list): The files to output.
             charts (list): The charts to output.
+            title (str): The title of the task.
             toolcall_id (str | None): The toolcall id.
         Returns:
             Dict: Contains 'output' with execution output or error message and 'success' status.
@@ -117,6 +123,7 @@ class PythonExecute(BaseTool):
                     "success": True,
                     "output_files": output_files,
                     "charts": charts,
+                    "title": title,
                 }
             )
             if isinstance(__builtins__, dict):
@@ -140,6 +147,7 @@ class PythonExecute(BaseTool):
                         "success": False,
                         "output_files": output_files,
                         "charts": charts,
+                        "title": title,
                     }
 
                 time.sleep(0.1)  # 避免过于频繁的检查
@@ -155,6 +163,7 @@ class PythonExecute(BaseTool):
                                 "message": new_output,
                                 "tool_id": toolcall_id,
                                 "completed": False,
+                                "title": title,
                             },
                         )
                     last_output = result["observation"]

@@ -16,6 +16,10 @@ class PythonExecute(PythonExecute):
     parameters: dict = {
         "type": "object",
         "properties": {
+            "title": {
+                "type": "string",
+                "description": "Short title of the task",
+            },
             "code": {
                 "type": "string",
                 "description": "The Python code to execute.",
