@@ -97,7 +97,7 @@ class Output:
             with open(sessions_path / f"{self._current_session_id}.out", "a", encoding="utf-8") as f:
                 try:
                     # 忽略streaming类型的消息
-                    if output.get("type") != "streaming":
+                    if output.get("type") not in ["streaming", "python_execute_streaming"]:
                         f.write(output_str + ",\n")
                 except Exception:
                     # logger.error(f"Error writing to session file: {e}")
