@@ -1,22 +1,25 @@
+import os
+from typing import Optional, Union
+
 from pydantic import Field
 
 from app.agent.toolcall import ToolCallAgent
 from app.config import config
 from app.tool import Terminate, ToolCollection
 from app.tool.bash import Bash
-
 from app.tool.file_saver import FileSaver
-
-# from app.tool.planning import PlanningTool
-from extensions.tool.python_execute import PythonExecute
+from app.tool.pwsh import Powershell
 from app.tool.str_replace_editor import StrReplaceEditor
 
 # from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
 from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
-from extensions.tool.human_input import HumanInput
 from extensions.tool.final_result import FinalResult
+from extensions.tool.human_input import HumanInput
+
+# from app.tool.planning import PlanningTool
+from extensions.tool.python_execute import PythonExecute
 
 
 class DataAnalyst(ToolCallAgent):
@@ -50,8 +53,8 @@ class DataAnalyst(ToolCallAgent):
             WebSearch(),
             StrReplaceEditor(),
             FileSaver(),
-            Bash(),
-            FinalResult(),
+            Powershell() if os.name == "nt" else Bash(),
+            # FinalResult(),
             # Terminal(),
         )
     )

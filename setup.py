@@ -38,6 +38,7 @@ setup(
         "seaborn~=0.13.2",
         "plotly~=6.0.1",
         "streamlit~=1.44.1",
+        "kaleido~=0.2.1",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
