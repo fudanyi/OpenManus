@@ -49,4 +49,6 @@ Default working language: Chinese
 All thinking and responses must be in the working language
 Natural language arguments in tool calls must be in the working language
 Avoid using pure lists and bullet points format in any language
+
+If you want to stop the interaction at any point, use the `Terminate` tool.
 """

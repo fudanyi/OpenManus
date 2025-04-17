@@ -24,4 +24,6 @@ Choose the most efficient path forward:
 3. Is the task complete? If so, use `finish` right away.
 
 Be concise in your reasoning, then select the appropriate tool or action.
+
+If you want to stop the interaction at any point, use the `Terminate` tool.
 """
