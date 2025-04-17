@@ -5,6 +5,7 @@ import time
 from app.flow.flow_factory import FlowFactory, FlowType
 from app.logger import logger
 from extensions.agent.data_analyst import DataAnalyst
+from extensions.agent.planner import Planner
 from extensions.output import Output
 from extensions.session import (
     get_session_id,
@@ -21,6 +22,8 @@ async def run_flow(session_id: str):
         "dataAnalyst": DataAnalyst(),
     }
 
+    planningAgent = Planner()
+
     # Set session ID for output
     Output.set_session_id(session_id)
 
@@ -33,7 +36,7 @@ async def run_flow(session_id: str):
         # 如果有session文件，则读取
         if has_session(session_id):
             prompt = ""
-            flow = load_flow_from_session(session_id, FlowType.PLANNING, agents)
+            flow = load_flow_from_session(session_id, FlowType.PLANNING, agents, planningAgent)
         # 如果没有session文件，则创建
         else:
             prompt = input("Enter your prompt: ")
@@ -61,6 +64,7 @@ async def run_flow(session_id: str):
             flow = FlowFactory.create_flow(
                 flow_type=FlowType.PLANNING,
                 agents=agents,
+                planningAgent=planningAgent,
             )
 
         try:

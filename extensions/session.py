@@ -2,6 +2,7 @@ import json
 import os
 import uuid
 
+from app.agent.base import BaseAgent
 from app.logger import logger
 from app.config import PROJECT_ROOT
 from app.flow.flow_factory import FlowFactory, FlowType
@@ -34,7 +35,7 @@ def has_session(session_id: str):
     return os.path.exists(get_session_path(session_id))
 
 
-def load_flow_from_session(session_id: str, flow_type: FlowType, agents: dict):
+def load_flow_from_session(session_id: str, flow_type: FlowType, agents: dict, planningAgent: BaseAgent):
     """
     加载session
     """
@@ -42,6 +43,7 @@ def load_flow_from_session(session_id: str, flow_type: FlowType, agents: dict):
     flow = FlowFactory.create_flow(
         flow_type=flow_type,
         agents=agents,
+        planningAgent=planningAgent,
     )
 
     try:
