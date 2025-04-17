@@ -6,6 +6,7 @@ from app.flow.flow_factory import FlowFactory, FlowType
 from app.logger import logger
 from extensions.agent.data_analyst import DataAnalyst
 from extensions.agent.planner import Planner
+from extensions.agent.report_maker import ReportMaker
 from extensions.output import Output
 from extensions.session import (
     get_session_id,
@@ -20,6 +21,7 @@ SESSION_FOLDER = "sessions"
 async def run_flow(session_id: str):
     agents = {
         "dataAnalyst": DataAnalyst(),
+        "reportMaker": ReportMaker(),
     }
 
     planningAgent = Planner()
