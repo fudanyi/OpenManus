@@ -1,8 +1,8 @@
 from pydantic import Field
 
-from app.agent.browser import BrowserAgent
+from app.agent.toolcall import ToolCallAgent
 from app.config import config
-from app.prompt.browser import NEXT_STEP_PROMPT as BROWSER_NEXT_STEP_PROMPT
+# from app.prompt.browser import NEXT_STEP_PROMPT as BROWSER_NEXT_STEP_PROMPT
 from app.prompt.manus import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.tool import Terminate, ToolCollection
 # from app.tool.browser_use_tool import BrowserUseTool
@@ -12,7 +12,7 @@ from app.tool.str_replace_editor import StrReplaceEditor
 from app.tool.metabase import Metabase
 
 
-class Manus(BrowserAgent):
+class Manus(ToolCallAgent):
     """
     A versatile general-purpose agent that uses planning to solve various tasks.
 
@@ -45,16 +45,16 @@ class Manus(BrowserAgent):
         original_prompt = self.next_step_prompt
 
         # Only check recent messages (last 3) for browser activity
-        recent_messages = self.memory.messages[-3:] if self.memory.messages else []
-        browser_in_use = any(
-            "browser_use" in msg.content.lower()
-            for msg in recent_messages
-            if hasattr(msg, "content") and isinstance(msg.content, str)
-        )
+        # recent_messages = self.memory.messages[-3:] if self.memory.messages else []
+        # browser_in_use = any(
+        #     "browser_use" in msg.content.lower()
+        #     for msg in recent_messages
+        #     if hasattr(msg, "content") and isinstance(msg.content, str)
+        # )
 
-        if browser_in_use:
-            # Override with browser-specific prompt temporarily to get browser context
-            self.next_step_prompt = BROWSER_NEXT_STEP_PROMPT
+        # if browser_in_use:
+        #     # Override with browser-specific prompt temporarily to get browser context
+        #     self.next_step_prompt = BROWSER_NEXT_STEP_PROMPT
 
         # Call parent's think method
         result = await super().think()

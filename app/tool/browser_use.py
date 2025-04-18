@@ -1,16 +1,14 @@
 from browser_use import Agent
 from langchain_openai import ChatOpenAI
-from app.schema import AgentState
 from app.tool.base import BaseTool, ToolResult
 from app.config import LLMSettings, config
+from app.logger import logger
 
 
 class BrowserUseTool(BaseTool):
     name: str = "browser_use"
     description: str = """Use the browser to complete the task.
-    Use this tool when you need to complete a task that requires web browsing.
-    The tool accepts a task description and executes it using a browser agent.
-    The tool returns the result of the task as a string."""
+    Use this tool when you need to complete a task that requires web browsing."""
     parameters: dict = {
         "type": "object",
         "properties": {
@@ -28,7 +26,6 @@ class BrowserUseTool(BaseTool):
     api_key: str = llm_config.api_key
     base_url: str = llm_config.base_url
     async def execute(self, prompt: str):
-        from app.agent.browser import BrowserAgent
         agent = Agent(
             task=prompt,
             llm=ChatOpenAI(
@@ -39,5 +36,10 @@ class BrowserUseTool(BaseTool):
             use_vision=False,  # 若模型不支持图像输入则关闭
         )
         result = await agent.run()
-        BrowserAgent.state = AgentState.FINISHED
-        return ToolResult(output=result.final_result())
+        return ToolResult(output=result.final_result(), system='The execute of browser_use tool is successful.')
+    async def cleanup(self) -> None:
+        """Handle cleanup if needed"""
+        try:
+            logger.info("Performing browser use tool cleanup")
+        except Exception as e:
+            logger.error(f"Error during cleanup: {e}")

@@ -25,7 +25,7 @@ class BrowserAgent(ToolCallAgent):
     next_step_prompt: str = NEXT_STEP_PROMPT
 
     max_observe: int = 10000
-    max_steps: int = 1
+    max_steps: int = 20
 
     # Configure the available tools
     available_tools: ToolCollection = Field(
