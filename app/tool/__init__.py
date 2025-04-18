@@ -11,6 +11,7 @@ from app.tool.terminate import Terminate
 from app.tool.tool_collection import ToolCollection
 from app.tool.web_search import WebSearch
 from app.tool.browser_use import BrowserUseTool
+from app.tool.metabase import Metabase
 
 
 __all__ = [
@@ -26,4 +27,5 @@ __all__ = [
     "Terminate",
     "ToolCollection",
     "WebSearch",
+    "Metabase",
 ]
