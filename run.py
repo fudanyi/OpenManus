@@ -1,5 +1,7 @@
 import argparse
 import asyncio
+import json
+import os
 import time
 
 from app.flow.flow_factory import FlowFactory, FlowType
@@ -14,6 +16,64 @@ from extensions.session import (
     load_flow_from_session,
     save_flow_to_session,
 )
+
+MAX_ATTACHMENT_LENGTH = 300
+
+
+def read_attachment(file_path: str) -> str:
+    """根据文件后缀名，读取附件文件头部内容
+
+    如果文件不存在，则返回空字符串。
+    如果文件是json格式，则返回json字符串。
+    如果文件是txt格式，则返回txt的前300字内容。
+    如果文件是md格式，则返回md的前300字内容。
+    如果文件是csv格式，则返回csv的前30行内容，且保证总字数小于300字。
+
+    Args:
+        file_path: 文件路径
+
+    Returns:
+        文件内容字符串
+    """
+    try:
+        if not os.path.exists(file_path):
+            return ""
+        if file_path.endswith(".json"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 返回json字符串
+                return f.read()
+        elif file_path.endswith(".txt"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 返回txt的前300字内容
+                return f.read(MAX_ATTACHMENT_LENGTH)
+        elif file_path.endswith(".md"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 返回md的前300字内容
+                return f.read(MAX_ATTACHMENT_LENGTH)
+        elif file_path.endswith(".csv"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 返回csv的前30行内容，且保证总字数小于300字
+                lines = f.readlines()
+                if len(lines) > 30:
+                    lines = lines[:30]
+                content = "".join(lines)
+                if len(content) > MAX_ATTACHMENT_LENGTH:
+                    # 确保内容不超过最大长度，同时保持行的完整性
+                    truncated_content = ""
+                    for line in lines:
+                        if len(truncated_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
+                            truncated_content += line
+                        else:
+                            break
+                    content = truncated_content
+                return content
+        else:
+            return ""
+
+    except Exception as e:
+        logger.error(f"Failed to read attachment {file_path}: {str(e)}")
+        return ""
+
 
 SESSION_FOLDER = "sessions"
 
@@ -38,12 +98,36 @@ async def run_flow(session_id: str):
         # 如果有session文件，则读取
         if has_session(session_id):
             prompt = ""
-            flow = load_flow_from_session(session_id, FlowType.PLANNING, agents, planningAgent)
+            flow = load_flow_from_session(
+                session_id, FlowType.PLANNING, agents, planningAgent
+            )
         # 如果没有session文件，则创建
         else:
-            prompt = input("Enter your prompt: ")
-            if prompt.strip().isspace() or not prompt:
-                logger.warning("Empty prompt provided.")
+            input_json = input("Enter your prompt: ")
+
+            # json格式，{"prompt":"xxxxx", "attachments":["xxx","bbb"]}
+            try:
+                input_json = json.loads(input_json)
+                prompt = input_json["prompt"]
+                attachments = input_json["attachments"] if "attachments" in input_json else []
+            except Exception as e:
+                logger.error(f"Invalid input: {str(e)}")
+                prompt = str(input_json)  # 确保prompt是字符串
+                attachments = []
+
+            attachments_content = ""
+            if attachments:
+                for attachment in attachments:
+                    attachment_file = "attachments/" + attachment
+                    # 尝试读取文件内容
+                    attachment_content = read_attachment(attachment_file)
+                    if attachment_content:
+                        attachments_content += (
+                            attachment_file + "\n" + attachment_content + "\n\n"
+                        )
+
+            if not isinstance(prompt, str) or not prompt.strip():
+                logger.warning("Empty or invalid prompt provided.")
                 return
             if prompt == "exit":
                 logger.info("Exited")
@@ -60,6 +144,10 @@ async def run_flow(session_id: str):
                 data={
                     "sender": "user",
                     "message": prompt,
+                    "attachments": [
+                        {"name": "attachments/" + attachment}
+                        for attachment in attachments
+                    ],
                 },
             )
 
@@ -71,6 +159,10 @@ async def run_flow(session_id: str):
 
         try:
             start_time = time.time()
+            if attachments_content:
+                prompt += "\nfile content preview:\n" + attachments_content
+                logger.info(f"prompt: {prompt}")
+
             result = await asyncio.wait_for(
                 flow.execute(prompt),
                 timeout=3600,  # 60 minute timeout for the entire execution
