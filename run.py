@@ -107,9 +107,21 @@ async def run_flow(session_id: str):
 
             # json格式，{"prompt":"xxxxx", "attachments":["xxx","bbb"]}
             try:
-                input_json = json.loads(input_json)
-                prompt = input_json["prompt"]
-                attachments = input_json["attachments"] if "attachments" in input_json else []
+                # 先去掉外层的双引号
+                input_str = input_json.strip('"')
+                # 将Python字典字符串转换为JSON格式
+                input_str = input_str.replace("'", '"').replace("None", "null")
+                input_json = json.loads(input_str)
+                prompt = (
+                    input_json["prompt"]
+                    if "prompt" in input_json
+                    else input_json["Prompt"]
+                )
+                attachments = (
+                    input_json["attachments"]
+                    if "attachments" in input_json
+                    else input_json.get("Attachments", [])
+                )
             except Exception as e:
                 logger.error(f"Invalid input: {str(e)}")
                 prompt = str(input_json)  # 确保prompt是字符串
@@ -147,7 +159,7 @@ async def run_flow(session_id: str):
                     "attachments": [
                         {"name": "attachments/" + attachment}
                         for attachment in attachments
-                    ],
+                    ] if attachments else [],
                 },
             )
 
