@@ -49,22 +49,6 @@ class HumanInput(BaseTool):
             ToolResult: The user's input or the default value
         """
         try:
-            # 处理 JSON 格式的 prompt
-            try:
-                # 先去掉外层的双引号
-                prompt_str = prompt.strip('"')
-                # 将Python字典字符串转换为JSON格式
-                prompt_str = prompt_str.replace("'", '"').replace("None", "null")
-                prompt_json = json.loads(prompt_str)
-                prompt = (
-                    prompt_json["prompt"]
-                    if "prompt" in prompt_json
-                    else prompt_json["Prompt"]
-                )
-            except Exception:
-                # 如果不是 JSON 格式，保持原样
-                pass
-
             Output.print(
                 type="chat",
                 text=f"{prompt}",
@@ -79,6 +63,22 @@ class HumanInput(BaseTool):
             if not prompt.endswith("\n"):
                 prompt += "\n"
             user_input = input(f"{prompt}").strip()
+
+            # 处理 JSON 格式的用户输入
+            try:
+                # 先去掉外层的双引号
+                input_str = user_input.strip('"')
+                # 将Python字典字符串转换为JSON格式
+                input_str = input_str.replace("'", '"').replace("None", "null")
+                input_json = json.loads(input_str)
+                user_input = (
+                    input_json["prompt"]
+                    if "prompt" in input_json
+                    else input_json["Prompt"]
+                )
+            except Exception:
+                # 如果不是 JSON 格式，保持原样
+                pass
 
             Output.print(
                 type="chat",
