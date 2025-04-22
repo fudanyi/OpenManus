@@ -127,7 +127,7 @@ class PlanningFlow(BaseFlow):
 
                 Output.print(
                     type="liveStatus",
-                    text=f"Executing plan step {self.current_step_index + 1}/{sum(len(section['steps']) for section in self.planning_tool.plans[self.active_plan_id].get('sections', []))}",
+                    text=f"执行计划步骤 {self.current_step_index + 1}/{sum(len(section['steps']) for section in self.planning_tool.plans[self.active_plan_id].get('sections', []))}",
                 )
 
                 # Execute current step with appropriate agent
@@ -138,7 +138,7 @@ class PlanningFlow(BaseFlow):
 
                 Output.print(
                     type="liveStatus",
-                    text=f"Completed plan step {self.current_step_index + 1}/{sum(len(section['steps']) for section in self.planning_tool.plans[self.active_plan_id].get('sections', []))}",
+                    text=f"完成计划步骤 {self.current_step_index + 1}/{sum(len(section['steps']) for section in self.planning_tool.plans[self.active_plan_id].get('sections', []))}",
                 )
 
                 # Check if agent wants to terminate
@@ -147,7 +147,7 @@ class PlanningFlow(BaseFlow):
 
             Output.print(
                 type="liveStatus",
-                text="Plan completed",
+                text="计划完成",
             )
 
             return result
@@ -161,7 +161,7 @@ class PlanningFlow(BaseFlow):
 
         # Output.print(
         #     type="liveStatus",
-        #     text="Planning",
+        #     text="规划中...",
         # )
 
         
@@ -173,7 +173,7 @@ class PlanningFlow(BaseFlow):
         # Output the planning status to the user
         Output.print(
             type="liveStatus",
-            text="Plan created",
+            text="计划创建完成",
         )
 
         # Get the planning tool and retrieve the active plan ID
@@ -366,7 +366,7 @@ class PlanningFlow(BaseFlow):
             )
 
             user_message = Message.user_message(
-                f"The plan has been completed. Here is the final plan status:\n\n{plan_text}\n\nPlease provide a summary of what was accomplished and any final thoughts."
+                f"The plan has been completed. Here is the final plan status:\n\n{plan_text}\n\nPlease provide a summary of what was accomplished and any final thoughts. Use Chinese to answer."
             )
 
             response = await self.llm.ask(

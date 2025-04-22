@@ -49,15 +49,15 @@ class HumanInput(BaseTool):
             ToolResult: The user's input or the default value
         """
         try:
-            Output.print(
-                type="chat",
-                text=f"{prompt}",
-                data={
-                    "sender": "assistant",
-                    "type": type,
-                    "message": prompt,
-                },
-            )
+            # Output.print(
+            #     type="chat",
+            #     text=f"{prompt}",
+            #     data={
+            #         "sender": "assistant",
+            #         "type": type,
+            #         "message": prompt,
+            #     },
+            # )
 
             # Show prompt and get input
             if not prompt.endswith("\n"):

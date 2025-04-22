@@ -174,7 +174,7 @@ class PlanningTool(BaseTool):
 
         Output.print(
             type="createPlan",
-            text=f"Plan {plan_id} created",
+            text=f"计划 {plan_id} 创建完毕",
             data=plan,
         )
 
