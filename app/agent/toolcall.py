@@ -162,10 +162,10 @@ class ToolCallAgent(ReActAgent):
             )
             logger.info(f"🔧 Tool arguments: {tool_calls[0].function.arguments}")
 
-            Output.print(
-                type="liveStatus",
-                text=f"🧰 准备工具: {[call.function.name for call in tool_calls]}",
-            )
+            # Output.print(
+            #     type="liveStatus",
+            #     text=f"🧰 准备工具: {[call.function.name for call in tool_calls]}",
+            # )
 
         try:
             if response is None:

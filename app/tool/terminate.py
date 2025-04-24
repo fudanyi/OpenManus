@@ -29,11 +29,11 @@ class Terminate(BaseTool):
         try:
             logger.info(f"Terminating interaction with status: {status}")
 
-            Output.print(
-                type="terminate",
-                text=f"Terminating interaction with status: {status}",
-                data={"status": status},
-            )
+            # Output.print(
+            #     type="terminate",
+            #     text=f"Terminating interaction with status: {status}",
+            #     data={"status": status},
+            # )
 
             return f"The interaction has been completed with status: {status}"
         except Exception as e:

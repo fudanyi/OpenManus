@@ -9,7 +9,7 @@ from extensions.tool.datatable_client.base import DataTableClient
 class TrinoDataTableClient(DataTableClient):
 
     def __init__(self) -> None:
-        self._sub = "2847"
+        self._sub = "27"
         self._url_prefix = "https://abcapi-dev.bottime.com"
 
         # if dev
