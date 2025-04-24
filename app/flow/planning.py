@@ -122,7 +122,7 @@ class PlanningFlow(BaseFlow):
 
                 # Exit if no more steps or plan completed
                 if self.current_step_index is None:
-                    result += await self._finalize_plan()
+                    result = await self._finalize_plan()
                     break
 
                 Output.print(
@@ -375,7 +375,7 @@ class PlanningFlow(BaseFlow):
                 messages=[user_message], system_msgs=[system_message]
             )
 
-            return f"Plan completed:\n\n{response}"
+            return f"{response}"
         except Exception as e:
             logger.error(f"Error finalizing plan with LLM: {e}")
 
@@ -390,7 +390,7 @@ class PlanningFlow(BaseFlow):
                 Please provide a summary of what was accomplished and any final thoughts.
                 """
                 summary = await agent.run(summary_prompt)
-                return f"Plan completed:\n\n{summary}"
+                return f"{summary}"
             except Exception as e2:
                 logger.error(f"Error finalizing plan with agent: {e2}")
                 return "Plan completed. Error generating summary."
