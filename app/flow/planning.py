@@ -113,7 +113,7 @@ class PlanningFlow(BaseFlow):
                     )
                     return f"Failed to create plan for: {input_text}"
 
-            self.primary_agent.memory = self.planningAgent.memory.model_copy()
+            memory = self.planningAgent.memory.model_copy()
 
             result = ""
             while True:
@@ -133,6 +133,7 @@ class PlanningFlow(BaseFlow):
                 # Execute current step with appropriate agent
                 step_type = step_info.get("type") if step_info else None
                 executor = self.get_executor(step_type)
+                executor.memory = memory
                 step_result = await self._execute_step(executor, step_info)
                 result += step_result + "\n"
 
@@ -164,12 +165,12 @@ class PlanningFlow(BaseFlow):
         #     text="规划中...",
         # )
 
-        
+
         response = await self.planningAgent.run(request)
 
         # Log the planning agent's response
         logger.info(f"Planning agent response: {response}")
-        
+
         # Output the planning status to the user
         Output.print(
             type="liveStatus",
@@ -181,7 +182,7 @@ class PlanningFlow(BaseFlow):
         if planning_tool and hasattr(planning_tool, "_current_plan_id"):
             self.active_plan_id = planning_tool._current_plan_id
 
-        self.planning_tool = planning_tool 
+        self.planning_tool = planning_tool
 
         # If execution reached here, create a default plan
         logger.info(f"Created plan for {request} with id: {self.active_plan_id}")
@@ -207,7 +208,7 @@ class PlanningFlow(BaseFlow):
             # Find first non-completed step
             current_index = 0
             for section in sections:
-                for step in section["steps"]:
+                for i, step in enumerate(section["steps"]):
                     if current_index >= len(step_statuses):
                         logger.warning("Step statuses array shorter than steps")
                         return None, None
@@ -217,6 +218,7 @@ class PlanningFlow(BaseFlow):
                             "section_title": section["title"],
                             "step": step,
                             "status": step_statuses[current_index],
+                            "type": section["types"][i],
                         }
                     current_index += 1
 

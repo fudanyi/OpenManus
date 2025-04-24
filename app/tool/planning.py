@@ -47,13 +47,17 @@ class PlanningTool(BaseTool):
                 "type": "string",
             },
             "sections": {
-                "description": "List of sections, each containing a title and steps. Required for create command, optional for update command.",
+                "description": "List of sections, each containing a title, steps and types of steps. Required for create command, optional for update command.",
                 "type": "array",
                 "items": {
                     "type": "object",
                     "properties": {
                         "title": {"type": "string"},
                         "steps": {
+                            "type": "array",
+                            "items": {"type": "string"}
+                        },
+                        "types": {
                             "type": "array",
                             "items": {"type": "string"}
                         }
@@ -431,7 +435,7 @@ class PlanningTool(BaseTool):
             for step in section["steps"]:
                 status = plan["step_statuses"][current_step_index]
                 notes = plan["step_notes"][current_step_index]
-                
+
                 status_symbol = {
                     "not_started": "[ ]",
                     "in_progress": "[→]",
@@ -442,7 +446,7 @@ class PlanningTool(BaseTool):
                 output += f"  {status_symbol} {step}\n"
                 if notes:
                     output += f"     Notes: {notes}\n"
-                
+
                 current_step_index += 1
             output += "\n"
 
