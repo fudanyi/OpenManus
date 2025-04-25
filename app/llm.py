@@ -742,10 +742,13 @@ class LLM:
             for msg in messages:
                 if isinstance(msg, dict):
                     msg = Message(**msg)
-                if msg.tool_calls:
+                if msg.tool_calls is not None:  # 添加 None 检查
                     for tool_call in msg.tool_calls:
-                        tool_calls.append((msg, tool_call))
-                elif msg.role == "tool":
+                        if tool_call is not None:  # 添加 None 检查
+                            tool_calls.append((msg, tool_call))
+                elif (
+                    msg.role == "tool" and msg.tool_call_id is not None
+                ):  # 添加 None 检查
                     tool_responses[msg.tool_call_id] = msg
 
             # 2. 重建消息序列
@@ -753,20 +756,29 @@ class LLM:
             for msg in messages:
                 if isinstance(msg, dict):
                     msg = Message(**msg)
-                if msg.role == "assistant" and msg.tool_calls:
+                if (
+                    msg.role == "assistant" and msg.tool_calls is not None
+                ):  # 添加 None 检查
                     # 对于包含工具调用的助手消息
                     reconstructed_messages.append(msg)
                     # 添加对应的工具响应
                     for tool_call in msg.tool_calls:
-                        if tool_call.id in tool_responses:
-                            reconstructed_messages.append(tool_responses[tool_call.id])
-                        else:
-                            # 添加空的工具响应
-                            reconstructed_messages.append(
-                                Message(
-                                    role="tool", tool_call_id=tool_call.id, content=""
+                        if (
+                            tool_call is not None and tool_call.id is not None
+                        ):  # 添加 None 检查
+                            if tool_call.id in tool_responses:
+                                reconstructed_messages.append(
+                                    tool_responses[tool_call.id]
                                 )
-                            )
+                            else:
+                                # 添加空的工具响应
+                                reconstructed_messages.append(
+                                    Message(
+                                        role="tool",
+                                        tool_call_id=tool_call.id,
+                                        content="",
+                                    )
+                                )
                 elif msg.role != "tool":  # 跳过工具响应消息，因为已经处理过了
                     reconstructed_messages.append(msg)
 
