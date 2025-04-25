@@ -6,6 +6,7 @@ import time
 
 from app.flow.flow_factory import FlowFactory, FlowType
 from app.logger import logger
+from app.config import WORKSPACE_ROOT
 from extensions.agent.data_analyst import DataAnalyst
 from extensions.agent.planner import Planner
 from extensions.agent.report_maker import ReportMaker
@@ -159,7 +160,7 @@ async def run_flow(session_id: str):
     try:
         Output.print(
             type="mainStart",
-            text=f"Start session {session_id}",
+            text=f"Start session {session_id} under {WORKSPACE_ROOT}",
         )
 
         # 获取用户输入

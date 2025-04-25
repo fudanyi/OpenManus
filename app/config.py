@@ -1,3 +1,4 @@
+import os
 import threading
 import tomllib
 from pathlib import Path
@@ -12,7 +13,7 @@ def get_project_root() -> Path:
 
 
 PROJECT_ROOT = get_project_root()
-WORKSPACE_ROOT = "."  # PROJECT_ROOT / "workspace"
+WORKSPACE_ROOT = os.getcwd()  # PROJECT_ROOT / "workspace"
 
 
 class LLMSettings(BaseModel):
