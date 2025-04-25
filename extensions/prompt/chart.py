@@ -6,4 +6,5 @@ PROMPT = """When generating chart, by default use plotly, if not approporiate th
                 from plotly.utils import PlotlyJSONEncoder
                 with open(config_file, 'w') as f:
                     json.dump({"type": "plotly", "config": json.loads(json.dumps(fig.to_dict(), cls=PlotlyJSONEncoder))}, f)
+    - do not directly write cls=plotly.utils.PlotlyJSONEncoder(it must be imported)
 """
