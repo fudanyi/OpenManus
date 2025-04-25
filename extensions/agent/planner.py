@@ -52,7 +52,6 @@ class Planner(ToolCallAgent):
     next_step_prompt: str = """
 Determine if you have enough information to create a plan for the given task. If you do not have enough information, ask for more information only when absolutely needed.
 Do not output thinking.
-
 If you have enough information, create a plan for the given task. Ask for user confirmation aftering creating the plan.
 If user have no futher comments, terminate this step.
 """
