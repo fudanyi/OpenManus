@@ -26,15 +26,11 @@ class PlanningTool(BaseTool):
         "type": "object",
         "properties": {
             "command": {
-                "description": "The command to execute. Available commands: create, update, list, get, set_active, mark_step, delete.",
+                "description": "The command to execute. Available commands: create, update, get.",
                 "enum": [
                     "create",
                     "update",
-                    "list",
                     "get",
-                    "set_active",
-                    "mark_step",
-                    "delete",
                 ],
                 "type": "string",
             },
@@ -64,19 +60,6 @@ class PlanningTool(BaseTool):
                     },
                     "required": ["title", "steps"]
                 }
-            },
-            "step_index": {
-                "description": "Index of the step to update (0-based). Required for mark_step command.",
-                "type": "integer",
-            },
-            "step_status": {
-                "description": "Status to set for a step. Used with mark_step command.",
-                "enum": ["not_started", "in_progress", "completed", "blocked"],
-                "type": "string",
-            },
-            "step_notes": {
-                "description": "Additional notes for a step, should contain important information which can be used for final analysis report/deliverable. Optional for mark_step command.",
-                "type": "string",
             },
         },
         "required": ["command"],
