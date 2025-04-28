@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import Optional, Union
 
@@ -35,7 +36,7 @@ class DataAnalyst(ToolCallAgent):
         "An analytical agent that utilizes multiple tools to solve diverse data tasks"
     )
 
-    system_prompt: str = SYSTEM_PROMPT.format(directory=config.workspace_root)
+    system_prompt: str = SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
     next_step_prompt: str = NEXT_STEP_PROMPT
 
     max_observe: int = 10000

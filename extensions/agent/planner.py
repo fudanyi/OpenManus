@@ -1,3 +1,4 @@
+import datetime
 import os
 from typing import Optional, Union
 
@@ -15,6 +16,7 @@ from app.tool.str_replace_editor import StrReplaceEditor
 # from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
 from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
+from extensions.prompt.planner import NEXT_STEP_PROMPT as PLANNER_NEXT_STEP_PROMPT, SYSTEM_PROMPT as PLANNER_SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
 from extensions.tool.final_result import FinalResult
 from extensions.tool.human_input import HumanInput
@@ -33,29 +35,9 @@ class Planner(ToolCallAgent):
         "An planning assistant that focus on creating a plan for a given task"
     )
 
-    system_prompt: str = (
-        "You are a friendly and efficient planning assistant. Create a concise, actionable plan with clear steps. "
-        "For each step, you should specify the type of step. The 'type' can be one of the following: dataAnalyst, reportMaker, other. "
-        "- If the step is to collect data, analyze data, the type should be 'dataAnalyst'. "
-        "- If the step is to generate a report or show the final result, the type should be 'reportMaker'. "
-        "- If the step is to do something else, the type should be 'other'. "
-        "Do not overthink for simple tasks. "
-        "Focus on key milestones rather than detailed sub-steps. "
-        "Optimize for clarity and efficiency. "
-        "Default working language: Chinese. "
-        "Use the language specified by user in messages as the working language when explicitly provided. "
-        "All thinking and responses must be in the working language"
-        "Natural language arguments in tool calls must be in the working language"
-        "Avoid using pure lists and bullet points format in any language"
-    )
+    system_prompt: str = PLANNER_SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
 
-    next_step_prompt: str = """
-Determine if you have enough information to create a plan for the given task. If you do not have enough information, ask for more information only when absolutely needed.
-Do not output thinking.
-
-If you have enough information, create a plan for the given task. Ask for user confirmation aftering creating the plan.
-If user have no futher comments, terminate this step.
-"""
+    next_step_prompt: str = PLANNER_NEXT_STEP_PROMPT
 
     max_observe: int = 10000
     max_steps: int = 20
@@ -65,6 +47,7 @@ If user have no futher comments, terminate this step.
         default_factory=lambda: ToolCollection(
             Terminate(),
             HumanInput(),
+            DataSource(),
             PlanningTool(),
         )
     )

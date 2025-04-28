@@ -1,3 +1,4 @@
+import datetime
 from pydantic import Field
 
 from app.agent.toolcall import ToolCallAgent
@@ -32,7 +33,8 @@ class ReportMaker(ToolCallAgent):
         "An report maker agent that utilizes multiple tools to solve diverse report making tasks"
     )
 
-    system_prompt: str = SYSTEM_PROMPT.format(directory=config.workspace_root)
+    system_prompt: str = SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
+            
     next_step_prompt: str = NEXT_STEP_PROMPT
 
     max_observe: int = 10000
@@ -44,14 +46,14 @@ class ReportMaker(ToolCallAgent):
             Terminate(),
             HumanInput(),
             # PlanningTool(),
-            PythonExecute(),
+            # PythonExecute(),
             # ChartVisualization(),
-            DataSource(),
-            WebSearch(),
+            # DataSource(),
+            # WebSearch(),
             StrReplaceEditor(),
             FileSaver(),
             Bash(),
-            FinalResult(),
+            # FinalResult(),
             # Terminal(),
         )
     )
