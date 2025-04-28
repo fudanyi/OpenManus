@@ -2,7 +2,6 @@ import os
 
 import aiofiles
 
-from app.config import WORKSPACE_ROOT
 from app.tool.base import BaseTool
 from extensions.output import Output
 
@@ -47,28 +46,21 @@ The tool accepts content and a file path, and saves the content to that location
             str: A message indicating the result of the operation.
         """
         try:
-            # Place the generated file in the workspace directory
-            if os.path.isabs(file_path):
-                file_name = os.path.basename(file_path)
-                full_path = os.path.join(WORKSPACE_ROOT, file_name)
-            else:
-                full_path = os.path.join(WORKSPACE_ROOT, file_path)
-
             # Ensure the directory exists
-            directory = os.path.dirname(full_path)
+            directory = os.path.dirname(file_path)
             if directory and not os.path.exists(directory):
                 os.makedirs(directory)
 
             # Write directly to the file
-            async with aiofiles.open(full_path, mode, encoding="utf-8") as file:
+            async with aiofiles.open(file_path, mode, encoding="utf-8") as file:
                 await file.write(content)
 
             Output.print(
                 type="fileSaver",
-                text=f"Content successfully saved to {os.path.relpath(file_path)}",
-                data={"file_path": os.path.relpath(file_path)},
+                text=f"Content successfully saved to {file_path}",
+                data={"file_path": file_path},
             )
 
-            return f"Content successfully saved to {file_name}"
+            return f"Content successfully saved to {file_path}"
         except Exception as e:
             return f"Error saving file: {str(e)}"

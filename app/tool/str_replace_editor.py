@@ -71,7 +71,7 @@ class StrReplaceEditor(BaseTool):
                 "type": "string",
             },
             "path": {
-                "description": "Absolute path to file or directory.",
+                "description": "Relatvie path to file or directory.",
                 "type": "string",
             },
             "file_text": {
@@ -167,10 +167,6 @@ class StrReplaceEditor(BaseTool):
         self, command: str, path: Path, operator: FileOperator
     ) -> None:
         """Validate path and command combination based on execution environment."""
-        # Check if path is absolute
-        if not path.is_absolute():
-            raise ToolError(f"The path {path} is not an absolute path")
-
         # Only check if path exists for non-create commands
         if command != "create":
             if not await operator.exists(path):
