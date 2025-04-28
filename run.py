@@ -6,6 +6,7 @@ import time
 
 from app.flow.flow_factory import FlowFactory, FlowType
 from app.logger import logger
+from app.config import WORKSPACE_ROOT
 from extensions.agent.data_analyst import DataAnalyst
 from extensions.agent.planner import Planner
 from extensions.agent.report_maker import ReportMaker
@@ -17,6 +18,7 @@ from extensions.session import (
     save_flow_to_session,
 )
 
+SESSION_FOLDER = "sessions"
 MAX_ATTACHMENT_LENGTH = 300
 
 
@@ -75,7 +77,72 @@ def read_attachment(file_path: str) -> str:
         return ""
 
 
-SESSION_FOLDER = "sessions"
+def get_user_input():
+    prompt = ""
+    attachments = []
+    attachments_content = ""
+    input_json = input("Enter your prompt: ")
+
+    # json格式，{"prompt":"xxxxx", "attachments":["xxx","bbb"]}
+    try:
+        # 先去掉外层的双引号
+        input_str = input_json.strip('"')
+        # 将Python字典字符串转换为JSON格式
+        input_str = input_str.replace("'", '"').replace("None", "null")
+        input_json = json.loads(input_str)
+        prompt = (
+            input_json["prompt"] if "prompt" in input_json else input_json["Prompt"]
+        )
+        attachments = (
+            input_json["attachments"]
+            if "attachments" in input_json
+            else input_json.get("Attachments", [])
+        )
+    except Exception as e:
+        logger.error(f"Invalid input: {str(e)}")
+        prompt = str(input_json)  # 确保prompt是字符串
+        attachments = []
+
+    if attachments:
+        for attachment in attachments:
+            attachment_file = "attachments/" + attachment
+            # 尝试读取文件内容
+            attachment_content = read_attachment(attachment_file)
+            if attachment_content:
+                attachments_content += (
+                    attachment_file + ":\n" + attachment_content + "\n\n"
+                )
+
+    if not isinstance(prompt, str) or not prompt.strip():
+        logger.warning("Empty or invalid prompt provided.")
+        Output.print(
+            type="mainExited",
+            text="Request processing exited",
+        )
+        exit(0)
+    if prompt == "exit":
+        logger.info("Exited")
+        Output.print(
+            type="mainExited",
+            text="Request processing exited",
+        )
+        exit(0)
+
+    Output.print(
+        type="chat",
+        text=f"{prompt}",
+        data={
+            "sender": "user",
+            "message": prompt,
+            "attachments": (
+                [{"name": "attachments/" + attachment} for attachment in attachments]
+                if attachments
+                else []
+            ),
+        },
+    )
+
+    return prompt, attachments, attachments_content
 
 
 async def run_flow(session_id: str):
@@ -85,6 +152,7 @@ async def run_flow(session_id: str):
     }
 
     planningAgent = Planner()
+    attachments_content = ""
 
     # Set session ID for output
     Output.set_session_id(session_id)
@@ -92,77 +160,19 @@ async def run_flow(session_id: str):
     try:
         Output.print(
             type="mainStart",
-            text=f"Start session {session_id}",
+            text=f"Start session {session_id} under {WORKSPACE_ROOT}",
         )
 
-        # 如果有session文件，则读取
+        # 获取用户输入
+        prompt, attachments, attachments_content = get_user_input()
+
+        # 如果有session文件，则读取session文件创建flow
         if has_session(session_id):
-            prompt = ""
             flow = load_flow_from_session(
                 session_id, FlowType.PLANNING, agents, planningAgent
             )
-        # 如果没有session文件，则创建
+        # 如果没有session文件，则创建flow
         else:
-            input_json = input("Enter your prompt: ")
-
-            # json格式，{"prompt":"xxxxx", "attachments":["xxx","bbb"]}
-            try:
-                # 先去掉外层的双引号
-                input_str = input_json.strip('"')
-                # 将Python字典字符串转换为JSON格式
-                input_str = input_str.replace("'", '"').replace("None", "null")
-                input_json = json.loads(input_str)
-                prompt = (
-                    input_json["prompt"]
-                    if "prompt" in input_json
-                    else input_json["Prompt"]
-                )
-                attachments = (
-                    input_json["attachments"]
-                    if "attachments" in input_json
-                    else input_json.get("Attachments", [])
-                )
-            except Exception as e:
-                logger.error(f"Invalid input: {str(e)}")
-                prompt = str(input_json)  # 确保prompt是字符串
-                attachments = []
-
-            attachments_content = ""
-            if attachments:
-                for attachment in attachments:
-                    attachment_file = "attachments/" + attachment
-                    # 尝试读取文件内容
-                    attachment_content = read_attachment(attachment_file)
-                    if attachment_content:
-                        attachments_content += (
-                            attachment_file + "\n" + attachment_content + "\n\n"
-                        )
-
-            if not isinstance(prompt, str) or not prompt.strip():
-                logger.warning("Empty or invalid prompt provided.")
-                return
-            if prompt == "exit":
-                logger.info("Exited")
-                Output.print(
-                    type="mainExited",
-                    text="Request processing exited",
-                )
-                return
-            logger.warning("Processing your request...")
-
-            Output.print(
-                type="chat",
-                text=f"{prompt}",
-                data={
-                    "sender": "user",
-                    "message": prompt,
-                    "attachments": [
-                        {"name": "attachments/" + attachment}
-                        for attachment in attachments
-                    ] if attachments else [],
-                },
-            )
-
             flow = FlowFactory.create_flow(
                 flow_type=FlowType.PLANNING,
                 agents=agents,
@@ -172,7 +182,7 @@ async def run_flow(session_id: str):
         try:
             start_time = time.time()
             if attachments_content:
-                prompt += "\nfile content preview:\n" + attachments_content
+                prompt += "\n" + attachments_content
                 logger.info(f"prompt: {prompt}")
 
             result = await asyncio.wait_for(

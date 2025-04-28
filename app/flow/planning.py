@@ -3,15 +3,15 @@ import time
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
-from extensions.agent.planner import Planner
 from pydantic import Field
 
 from app.agent.base import BaseAgent
 from app.flow.base import BaseFlow
 from app.llm import LLM
 from app.logger import logger
-from app.schema import AgentState, Message, ToolChoice
+from app.schema import AgentState, Memory, Message, ToolChoice
 from app.tool import PlanningTool
+from extensions.agent.planner import Planner
 from extensions.output import Output
 from extensions.tool.human_input import HumanInput
 
@@ -55,6 +55,7 @@ class PlanningFlow(BaseFlow):
     executor_keys: List[str] = Field(default_factory=list)
     active_plan_id: str = Field(default_factory=lambda: f"plan_{int(time.time())}")
     current_step_index: Optional[int] = None
+    memory: Memory = Field(default_factory=Memory, description="Flow's memory store")
 
     def __init__(
         self, agents: Union[BaseAgent, List[BaseAgent], Dict[str, BaseAgent]], **data
@@ -79,6 +80,9 @@ class PlanningFlow(BaseFlow):
         if not self.executor_keys:
             self.executor_keys = list(self.agents.keys())
 
+        # Set the planning tool
+        self.planning_tool = self.planningAgent.available_tools.get_tool("planning")
+
     def get_executor(self, step_type: Optional[str] = None) -> BaseAgent:
         """
         Get an appropriate executor agent for the current step.
@@ -102,8 +106,9 @@ class PlanningFlow(BaseFlow):
             if not self.primary_agent:
                 raise ValueError("No primary agent available")
 
-            # Create initial plan if input provided
+            # Create initial plan if there is no plan
             if input_text:
+                self.planningAgent.memory = self.memory
                 await self._create_initial_plan(input_text)
 
                 # Verify plan was created successfully
@@ -112,8 +117,6 @@ class PlanningFlow(BaseFlow):
                         f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool."
                     )
                     return f"Failed to create plan for: {input_text}"
-
-            memory = self.planningAgent.memory.model_copy()
 
             result = ""
             while True:
@@ -133,7 +136,7 @@ class PlanningFlow(BaseFlow):
                 # Execute current step with appropriate agent
                 step_type = step_info.get("type") if step_info else None
                 executor = self.get_executor(step_type)
-                executor.memory = memory
+                executor.memory = self.memory
                 step_result = await self._execute_step(executor, step_info)
                 result += step_result + "\n"
 
@@ -164,7 +167,6 @@ class PlanningFlow(BaseFlow):
         #     type="liveStatus",
         #     text="规划中...",
         # )
-
 
         response = await self.planningAgent.run(request)
 

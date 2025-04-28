@@ -37,7 +37,9 @@ class Planner(ToolCallAgent):
 
     system_prompt: str = PLANNER_SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
 
+
     next_step_prompt: str = PLANNER_NEXT_STEP_PROMPT
+
 
     max_observe: int = 10000
     max_steps: int = 20
