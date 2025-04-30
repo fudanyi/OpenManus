@@ -3,6 +3,8 @@ import time
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
+from app.tool.tool_collection import ToolCollection
+from extensions.tool.result_reporter import ResultReporter
 from pydantic import Field
 
 from app.agent.base import BaseAgent
@@ -361,38 +363,52 @@ class PlanningFlow(BaseFlow):
 
     async def _finalize_plan(self) -> str:
         """Finalize the plan and provide a summary using the flow's LLM directly."""
-        plan_text = await self._get_plan_text()
-
-        # Create a summary using the flow's LLM directly
         try:
             system_message = Message.system_message(
-                "You are a planning assistant. Your task is to summarize the completed plan."
+                "You are a summarize assistant. Your task is to summarize previous messags into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts."
             )
 
-            user_message = Message.user_message(
-                f"The plan has been completed. Here is the final plan status:\n\n{plan_text}\n\nPlease provide a summary of what was accomplished and any final thoughts. Use Chinese to answer."
+            self.memory.messages.append(
+                Message.user_message(
+                    f"Please summarize previous messags into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts., then use result reporter to report deliverables."
+                )
+            )
+            user_message = self.memory.messages
+
+            available_tools = ToolCollection(
+                ResultReporter()
+            )
+            
+            response = await self.llm.ask_tool(
+                messages=user_message, 
+                system_msgs=[system_message],
+                tool_choice=ToolChoice.REQUIRED,
+                tools=available_tools.to_params()
             )
 
-            response = await self.llm.ask(
-                messages=[user_message], system_msgs=[system_message]
-            )
+            if response is None:
+                logger.warning("No response received from LLM in _finalize_plan")
+                return "Plan completed. Unable to generate summary due to LLM response error."
 
-            return f"{response}"
+            # Extract deliverables from tool calls
+            if hasattr(response, 'tool_calls') and response.tool_calls:
+                for tool_call in response.tool_calls:
+                    if tool_call.function.name == 'result_reporter':
+                        try:
+                            args = json.loads(tool_call.function.arguments)
+                            if 'deliverables' in args:
+                                Output.print(
+                                    type="finalResult",
+                                    text=response.content,
+                                    data={
+                                        "deliverables": args['deliverables'],
+                                    },
+                                )
+                                return response.content
+                        except json.JSONDecodeError as e:
+                            logger.error(f"Error parsing deliverables JSON: {e}")
+
+            return "Plan completed. No deliverables found in response."
         except Exception as e:
             logger.error(f"Error finalizing plan with LLM: {e}")
-
-            # Fallback to using an agent for the summary
-            try:
-                agent = self.primary_agent
-                summary_prompt = f"""
-                The plan has been completed. Here is the final plan status:
-
-                {plan_text}
-
-                Please provide a summary of what was accomplished and any final thoughts.
-                """
-                summary = await agent.run(summary_prompt)
-                return f"{summary}"
-            except Exception as e2:
-                logger.error(f"Error finalizing plan with agent: {e2}")
-                return "Plan completed. Error generating summary."
+            return "Plan completed. Error generating summary."

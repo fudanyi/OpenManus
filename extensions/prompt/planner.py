@@ -22,5 +22,4 @@ Do not output thinking. Do not query data.
 If you have enough information, create/update a plan for the given task. 
 Ask for user confirmation aftering creating/update the plan.
 If user have no futher comments, terminate this step without saying anything, just call terminate tool.
-DO NOT execute the plan, your task is only to create and confirm the plan then terminate!
 """ 
