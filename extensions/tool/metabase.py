@@ -1,7 +1,5 @@
 from typing import Any, Dict, List
 import httpx
-import psycopg2
-from psycopg2.extras import RealDictCursor
 from mcp.server.fastmcp import FastMCP
 import sys
 import asyncio
