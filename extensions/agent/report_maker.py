@@ -18,6 +18,7 @@ from extensions.prompt.report_maker import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
 from extensions.tool.human_input import HumanInput
 from extensions.tool.final_result import FinalResult
+from extensions.tool.metabase_tool import MetabaseTool
 
 
 class ReportMaker(ToolCallAgent):
@@ -55,6 +56,7 @@ class ReportMaker(ToolCallAgent):
             Bash(),
             # FinalResult(),
             # Terminal(),
+            MetabaseTool(),
         )
     )
 
