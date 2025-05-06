@@ -25,7 +25,7 @@ class ResultReporter(BaseTool):
         "<guidelines>"
         "1. for json and image files having the same name, report only once as chart with the json filename. The image with same name is ignored"
         "2. for html/css/js that work together, report only once as webpage with the html filename. "
-        "3. for dashboard, report url in filename field. the url is like http://111.231.167.99:3000/dashboard/[dashboard_id]"
+        "3. for dashboard, report view link in filename field, and report dashboard id in id field."
         "</guidelines>"
         "Use this tool to report final results and deliverables at the end of a plan execution."
     )
@@ -48,6 +48,7 @@ class ResultReporter(BaseTool):
                         "title": {"type": "string"},
                         "description": {"type": "string"},
                         "is_main": {"type": "boolean"},
+                        "id": {"type": "string"},
                         "type": {
                             "type": "string",
                             "enum": [t.value for t in DeliverableType]

@@ -387,6 +387,15 @@ class MetabaseAPI:
             )
             return response.json()
 
+    async def make_public(self, dashboard_id: int) -> Dict[str, Any]:
+        """Make a dashboard public"""
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                f"{METABASE_URL}/api/dashboard/{dashboard_id}/public_link",
+                headers=self.headers
+            )
+            return response.json()
+        
     async def get_question_details(self, card_id: int) -> Dict[str, Any]:
         """Get question details"""
         try:
@@ -884,7 +893,11 @@ async def create_dashboard(dashboard_name: str, description: str) -> str:
         return "Failed to connect to Metabase, please check authentication"
 
     dashboard = await metabase_api.create_dashboard(dashboard_name, description)
-    return f"Successfully created dashboard '{dashboard_name}', ID: {dashboard['id']}"
+    public_link_result = await metabase_api.make_public(dashboard['id'])
+    uuid = public_link_result['uuid']
+    public_link = f"{METABASE_URL}/public/dashboard/{uuid}"
+
+    return f"Successfully created dashboard '{dashboard_name}', ID: {dashboard['id']}, view link: {public_link}"
 
 @mcp.tool()
 async def execute_query(sql_query: str) -> Dict[str, Any]:
