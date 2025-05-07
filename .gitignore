@@ -203,3 +203,4 @@ node_modules
 sessions/
 package-lock.json
 .vscode/
+.vscode/launch.json
