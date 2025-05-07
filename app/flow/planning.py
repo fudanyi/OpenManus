@@ -365,25 +365,23 @@ class PlanningFlow(BaseFlow):
         """Finalize the plan and provide a summary using the flow's LLM directly."""
         try:
             system_message = Message.system_message(
-                "You are a summarize assistant. Your task is to summarize previous messags into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts."
+                "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts."
             )
 
             self.memory.messages.append(
                 Message.user_message(
-                    f"Please summarize previous messags into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts., then use result reporter to report deliverables."
+                    "Please summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts, then always use result_reporter tool to report deliverables."
                 )
             )
-            user_message = self.memory.messages
+            user_messages = self.memory.messages
 
-            available_tools = ToolCollection(
-                ResultReporter()
-            )
-            
+            available_tools = ToolCollection(ResultReporter())
+
             response = await self.llm.ask_tool(
-                messages=user_message, 
+                messages=user_messages,
                 system_msgs=[system_message],
                 tool_choice=ToolChoice.REQUIRED,
-                tools=available_tools.to_params()
+                tools=available_tools.to_params(),
             )
 
             if response is None:
@@ -391,17 +389,17 @@ class PlanningFlow(BaseFlow):
                 return "Plan completed. Unable to generate summary due to LLM response error."
 
             # Extract deliverables from tool calls
-            if hasattr(response, 'tool_calls') and response.tool_calls:
+            if hasattr(response, "tool_calls") and response.tool_calls:
                 for tool_call in response.tool_calls:
-                    if tool_call.function.name == 'result_reporter':
+                    if tool_call.function.name == "result_reporter":
                         try:
                             args = json.loads(tool_call.function.arguments)
-                            if 'deliverables' in args:
+                            if "deliverables" in args:
                                 Output.print(
                                     type="finalResult",
                                     text=response.content,
                                     data={
-                                        "deliverables": args['deliverables'],
+                                        "deliverables": args["deliverables"],
                                     },
                                 )
                                 return response.content
