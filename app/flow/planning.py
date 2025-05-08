@@ -123,7 +123,7 @@ class PlanningFlow(BaseFlow):
                 # Verify plan was created successfully
                 if self.active_plan_id not in self.planning_tool.plans:
                     logger.error(
-                        f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool."
+                        f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool {self.planning_tool.plans}."
                     )
                     return f"Failed to create plan for: {input_text}"
 
