@@ -1,6 +1,7 @@
 import json
 import time
 from enum import Enum
+import traceback
 from typing import Dict, List, Optional, Union
 
 from pydantic import Field
@@ -177,7 +178,9 @@ class PlanningFlow(BaseFlow):
 
             return result
         except Exception as e:
-            logger.error(f"Error in PlanningFlow: {str(e)}")
+            logger.error(
+                f"Error in PlanningFlow: {str(e)}, e.traceback: {traceback.format_exc()}"
+            )
             return f"Execution failed: {str(e)}"
 
     async def _create_initial_plan(self, request: str) -> None:
