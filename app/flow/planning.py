@@ -75,9 +75,12 @@ class PlanningFlow(BaseFlow):
         if "plan_id" in data:
             data["active_plan_id"] = data.pop("plan_id")
 
+        # Set the planning tool
+        self.planning_tool = self.planningAgent.available_tools.get_tool("planning")
+
         # Initialize the planning tool if not provided
         if "planning_tool" not in data:
-            planning_tool = PlanningTool()
+            planning_tool = self.planning_tool
             data["planning_tool"] = planning_tool
 
         # Call parent's init with the processed data
@@ -89,9 +92,6 @@ class PlanningFlow(BaseFlow):
         # Set executor_keys to all agent keys if not specified
         if not self.executor_keys:
             self.executor_keys = list(self.agents.keys())
-
-        # Set the planning tool
-        self.planning_tool = self.planningAgent.available_tools.get_tool("planning")
 
     def get_executor(self, step_type: Optional[str] = None) -> BaseAgent:
         """
@@ -206,8 +206,11 @@ class PlanningFlow(BaseFlow):
         # Get the planning tool and retrieve the active plan ID
         planning_tool = self.planningAgent.available_tools.get_tool("planning")
         if planning_tool and hasattr(planning_tool, "_current_plan_id"):
-            self.active_plan_id = planning_tool._current_plan_id
-
+            self.active_plan_id = (
+                planning_tool._current_plan_id
+                if planning_tool._current_plan_id
+                else f"plan_{int(time.time())}"
+            )
         self.planning_tool = planning_tool
 
         # If execution reached here, create a default plan
