@@ -1,7 +1,7 @@
 import json
 import time
-from enum import Enum
 import traceback
+from enum import Enum
 from typing import Dict, List, Optional, Union
 
 from pydantic import Field
@@ -75,13 +75,9 @@ class PlanningFlow(BaseFlow):
         if "plan_id" in data:
             data["active_plan_id"] = data.pop("plan_id")
 
-        # Set the planning tool
-        self.planning_tool = self.planningAgent.available_tools.get_tool("planning")
-
         # Initialize the planning tool if not provided
         if "planning_tool" not in data:
-            planning_tool = self.planning_tool
-            data["planning_tool"] = planning_tool
+            data["planning_tool"] = PlanningTool()
 
         # Call parent's init with the processed data
         super().__init__(agents, **data)
@@ -92,6 +88,9 @@ class PlanningFlow(BaseFlow):
         # Set executor_keys to all agent keys if not specified
         if not self.executor_keys:
             self.executor_keys = list(self.agents.keys())
+
+        # Set the planning tool
+        self.planning_tool = self.planningAgent.available_tools.get_tool("planning")
 
     def get_executor(self, step_type: Optional[str] = None) -> BaseAgent:
         """
