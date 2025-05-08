@@ -208,7 +208,7 @@ class PlanningFlow(BaseFlow):
             self.active_plan_id = (
                 planning_tool._current_plan_id
                 if planning_tool._current_plan_id
-                else f"plan_{int(time.time())}"
+                else self.active_plan_id
             )
         self.planning_tool = planning_tool
 
