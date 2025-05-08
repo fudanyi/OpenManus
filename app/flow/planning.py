@@ -3,8 +3,6 @@ import time
 from enum import Enum
 from typing import Dict, List, Optional, Union
 
-from app.tool.tool_collection import ToolCollection
-from extensions.tool.result_reporter import ResultReporter
 from pydantic import Field
 
 from app.agent.base import BaseAgent
@@ -13,9 +11,11 @@ from app.llm import LLM
 from app.logger import logger
 from app.schema import AgentState, Memory, Message, ToolChoice
 from app.tool import PlanningTool
+from app.tool.tool_collection import ToolCollection
 from extensions.agent.planner import Planner
 from extensions.output import Output
 from extensions.tool.human_input import HumanInput
+from extensions.tool.result_reporter import ResultReporter
 
 
 class PlanStepStatus(str, Enum):
@@ -50,6 +50,7 @@ class PlanStepStatus(str, Enum):
 class PlanningFlow(BaseFlow):
     """A flow that manages planning and execution of tasks using agents."""
 
+    session_id: Optional[str] = None
     llm: LLM = Field(default_factory=lambda: LLM())
     planning_tool: PlanningTool = Field(default_factory=PlanningTool)
     planningAgent: BaseAgent = Field(default_factory=lambda: Planner())
@@ -60,7 +61,10 @@ class PlanningFlow(BaseFlow):
     memory: Memory = Field(default_factory=Memory, description="Flow's memory store")
 
     def __init__(
-        self, agents: Union[BaseAgent, List[BaseAgent], Dict[str, BaseAgent]], **data
+        self,
+        agents: Union[BaseAgent, List[BaseAgent], Dict[str, BaseAgent]],
+        session_id: Optional[str] = None,
+        **data,
     ):
         # Set executor keys before super().__init__
         if "executors" in data:
@@ -77,6 +81,9 @@ class PlanningFlow(BaseFlow):
 
         # Call parent's init with the processed data
         super().__init__(agents, **data)
+
+        # 在 super().__init__ 之后设置 session_id
+        self.session_id = session_id
 
         # Set executor_keys to all agent keys if not specified
         if not self.executor_keys:
@@ -120,6 +127,12 @@ class PlanningFlow(BaseFlow):
                     )
                     return f"Failed to create plan for: {input_text}"
 
+            # 保存session
+            if self.session_id:
+                from extensions.session import save_flow_to_session
+
+                save_flow_to_session(self.session_id, self)
+
             result = ""
             while True:
                 # Get current step to execute
@@ -150,6 +163,12 @@ class PlanningFlow(BaseFlow):
                 # Check if agent wants to terminate
                 if hasattr(executor, "state") and executor.state == AgentState.FINISHED:
                     break
+
+                # 保存session
+                if self.session_id:
+                    from extensions.session import save_flow_to_session
+
+                    save_flow_to_session(self.session_id, self)
 
             Output.print(
                 type="liveStatus",

@@ -43,6 +43,7 @@ def load_flow_from_session(
     """
 
     flow = FlowFactory.create_flow(
+        session_id=session_id,
         flow_type=flow_type,
         agents=agents,
         planningAgent=planningAgent,

@@ -15,6 +15,7 @@ class FlowFactory:
 
     @staticmethod
     def create_flow(
+        session_id: str,
         flow_type: FlowType,
         agents: Union[BaseAgent, List[BaseAgent], Dict[str, BaseAgent]],
         **kwargs,
@@ -27,4 +28,4 @@ class FlowFactory:
         if not flow_class:
             raise ValueError(f"Unknown flow type: {flow_type}")
 
-        return flow_class(agents, **kwargs)
+        return flow_class(agents, session_id, **kwargs)
