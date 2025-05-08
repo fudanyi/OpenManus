@@ -370,7 +370,8 @@ class PlanningFlow(BaseFlow):
 
             self.memory.messages.append(
                 Message.user_message(
-                    "Please summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts, then always use result_reporter tool to report deliverables."
+                    "Please summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts"
+                    "Then always use result_reporter tool to report deliverables. But DONOT mention the tool in your summary."
                 )
             )
             user_messages = self.memory.messages
@@ -380,7 +381,7 @@ class PlanningFlow(BaseFlow):
             response = await self.llm.ask_tool(
                 messages=user_messages,
                 system_msgs=[system_message],
-                tool_choice=ToolChoice.REQUIRED,
+                tool_choice=ToolChoice.AUTO,
                 tools=available_tools.to_params(),
             )
 

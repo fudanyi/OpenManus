@@ -1,7 +1,6 @@
 from app.tool.base import BaseTool
 from app.tool.bash import Bash
 from app.tool.pwsh import Powershell
-from app.tool.browser_use_tool import BrowserUseTool
 from app.tool.create_chat_completion import CreateChatCompletion
 from app.tool.planning import PlanningTool
 from app.tool.python_execute import PythonExecute
@@ -16,7 +15,6 @@ __all__ = [
     "BaseTool",
     "Bash",
     "Powershell",
-    "BrowserUseTool",
     "CreateChatCompletion",
     "PlanningTool",
     "PythonExecute",
