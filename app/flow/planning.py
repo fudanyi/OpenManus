@@ -125,7 +125,7 @@ class PlanningFlow(BaseFlow):
                     logger.error(
                         f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool {self.planning_tool.plans}."
                     )
-                    return f"Failed to create plan for: {input_text}"
+                    # return f"Failed to create plan for: {input_text}"
 
             # 保存session
             if self.session_id:
