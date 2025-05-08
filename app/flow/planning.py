@@ -205,11 +205,11 @@ class PlanningFlow(BaseFlow):
         # Get the planning tool and retrieve the active plan ID
         planning_tool = self.planningAgent.available_tools.get_tool("planning")
         if planning_tool and hasattr(planning_tool, "_current_plan_id"):
-            self.active_plan_id = (
-                planning_tool._current_plan_id
-                if planning_tool._current_plan_id
-                else self.active_plan_id
-            )
+            if not planning_tool._current_plan_id:
+                planning_tool._current_plan_id = self.active_plan_id
+            else:
+                self.active_plan_id = planning_tool._current_plan_id
+
         self.planning_tool = planning_tool
 
         # If execution reached here, create a default plan
