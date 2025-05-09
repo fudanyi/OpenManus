@@ -40,26 +40,28 @@ def read_attachment(file_path: str) -> str:
     try:
         if not os.path.exists(file_path):
             return ""
+
+        file_content = ""
         if file_path.endswith(".json"):
             with open(file_path, "r", encoding="utf-8") as f:
                 # 返回json字符串
-                return f.read()
+                file_content = f.read()
         elif file_path.endswith(".txt"):
             with open(file_path, "r", encoding="utf-8") as f:
                 # 返回txt的前300字内容
-                return f.read(MAX_ATTACHMENT_LENGTH)
+                file_content = f.read(MAX_ATTACHMENT_LENGTH)
         elif file_path.endswith(".md"):
             with open(file_path, "r", encoding="utf-8") as f:
                 # 返回md的前300字内容
-                return f.read(MAX_ATTACHMENT_LENGTH)
+                file_content = f.read(MAX_ATTACHMENT_LENGTH)
         elif file_path.endswith(".csv"):
             with open(file_path, "r", encoding="utf-8") as f:
                 # 返回csv的前30行内容，且保证总字数小于300字
                 lines = f.readlines()
                 if len(lines) > 30:
                     lines = lines[:30]
-                content = "".join(lines)
-                if len(content) > MAX_ATTACHMENT_LENGTH:
+                file_content = "".join(lines)
+                if len(file_content) > MAX_ATTACHMENT_LENGTH:
                     # 确保内容不超过最大长度，同时保持行的完整性
                     truncated_content = ""
                     for line in lines:
@@ -67,10 +69,14 @@ def read_attachment(file_path: str) -> str:
                             truncated_content += line
                         else:
                             break
-                    content = truncated_content
-                return content
+                    file_content = truncated_content
         else:
-            return ""
+            file_content = ""
+
+        if file_content:
+            return file_path + ":\n" + file_content + "\n"
+        else:
+            return file_path + "\n"
 
     except Exception as e:
         logger.error(f"Failed to read attachment {file_path}: {str(e)}")
@@ -109,9 +115,7 @@ def get_user_input():
             # 尝试读取文件内容
             attachment_content = read_attachment(attachment_file)
             if attachment_content:
-                attachments_content += (
-                    attachment_file + ":\n" + attachment_content + "\n\n"
-                )
+                attachments_content += attachment_content
 
     if not isinstance(prompt, str) or not prompt.strip():
         logger.warning("Empty or invalid prompt provided.")
@@ -183,7 +187,7 @@ async def run_flow(session_id: str):
         try:
             start_time = time.time()
             if attachments_content:
-                prompt += "\n" + attachments_content
+                prompt += "\nAttachments:\n" + attachments_content
                 logger.info(f"prompt: {prompt}")
 
             result = await asyncio.wait_for(
