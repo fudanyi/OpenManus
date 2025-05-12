@@ -40,6 +40,7 @@ setup(
         "streamlit~=1.44.1",
         "kaleido~=0.2.1",
         "pdf2docx==0.5.6",
+        "openpyxl==3.1.2",
     ],
     classifiers=[
         "Programming Language :: Python :: 3",
