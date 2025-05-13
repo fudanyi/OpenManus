@@ -4,6 +4,8 @@ import json
 import os
 import time
 
+import openpyxl
+
 from app.config import WORKSPACE_ROOT
 from app.flow.flow_factory import FlowFactory, FlowType
 from app.logger import logger
@@ -60,18 +62,34 @@ def read_attachment(file_path: str) -> str:
                 lines = f.readlines()
                 if len(lines) > 30:
                     lines = lines[:30]
-                file_content = "".join(lines)
-                if len(file_content) > MAX_ATTACHMENT_LENGTH:
-                    # 确保内容不超过最大长度，同时保持行的完整性
-                    truncated_content = ""
-                    for line in lines:
-                        if len(truncated_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
-                            truncated_content += line
-                        else:
-                            break
-                    file_content = truncated_content
+                # 确保内容不超过最大长度，同时保持行的完整性
+                for line in lines:
+                    if len(file_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
+                        file_content += line
+                    else:
+                        break
+        elif file_path.endswith(".html"):
+            with open(file_path, "r", encoding="utf-8") as f:
+                # 返回html的内容
+                file_content = f.read()
+        elif file_path.endswith(".xlsx"):
+            # 读取xlsx文件前30行内容
+            workbook = openpyxl.load_workbook(file_path)
+            sheet = workbook.active
+            for row in sheet.iter_rows(max_row=30):
+                # 将None值转换为空字符串
+                line = "".join([str(cell.value) if cell.value is not None else "" for cell in row]) + "\n"
+                if len(file_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
+                    file_content += line
+                else:
+                    break
         else:
-            file_content = ""
+            # 尝试当作文本文件读取一下，失败后为""
+            try:
+                with open(file_path, "r", encoding="utf-8") as f:
+                    file_content = f.read(MAX_ATTACHMENT_LENGTH)
+            except Exception:
+                file_content = ""
 
         if file_content:
             return file_path + ":\n" + file_content + "\n"
@@ -187,7 +205,8 @@ async def run_flow(session_id: str):
         try:
             start_time = time.time()
             if attachments_content:
-                prompt += "\nAttachments:\n" + attachments_content
+                prompt += "\n以下是数据文件路径及数据内容的预览，进行分析时请参考：\n"
+                prompt += attachments_content
                 logger.info(f"prompt: {prompt}")
 
             result = await asyncio.wait_for(
