@@ -77,7 +77,8 @@ def read_attachment(file_path: str) -> str:
             workbook = openpyxl.load_workbook(file_path)
             sheet = workbook.active
             for row in sheet.iter_rows(max_row=30):
-                line = "".join([cell.value for cell in row]) + "\n"
+                # 将None值转换为空字符串
+                line = "".join([str(cell.value) if cell.value is not None else "" for cell in row]) + "\n"
                 if len(file_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
                     file_content += line
                 else:
