@@ -205,7 +205,8 @@ async def run_flow(session_id: str):
         try:
             start_time = time.time()
             if attachments_content:
-                prompt += "\nAttachments:\n" + attachments_content
+                prompt += "\n以下是数据文件路径及数据内容的预览，进行分析时请参考：\n"
+                prompt += attachments_content
                 logger.info(f"prompt: {prompt}")
 
             result = await asyncio.wait_for(
