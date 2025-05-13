@@ -125,6 +125,21 @@ class PlanningFlow(BaseFlow):
                     logger.error(
                         f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool {self.planning_tool.plans}."
                     )
+
+                    # Create a simple plan with the input text as the only step
+                    self.planning_tool.plans[self.active_plan_id] = {
+                        "title": input_text,
+                        "sections": [
+                            {
+                                "title": "默认计划",
+                                "steps": [input_text],
+                                "types": ["dataAnalyst"]  # TODO: 应该有一个万能agent在这里， 包括DA+reportmaker所有TOOL， focus on快速完成用户的明确任务
+                            }
+                        ],
+                        "step_statuses": ["not_started"],
+                        "step_notes": [""]
+                    }
+                    logger.info(f"Created simple plan with input text as step: {input_text}")
                     # return f"Failed to create plan for: {input_text}"
 
             # 保存session
