@@ -118,14 +118,27 @@ class PlanningFlow(BaseFlow):
             # Create initial plan if there is no plan
             if input_text:
                 self.planningAgent.memory = self.memory
-                await self._create_initial_plan(input_text)
 
-                # Verify plan was created successfully
-                if self.active_plan_id not in self.planning_tool.plans:
-                    logger.error(
-                        f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool {self.planning_tool.plans}."
+                self.planning_tool = self.planningAgent.available_tools.get_tool(
+                    "planning"
+                )
+                if self.planning_tool.plans:
+                    # 如果已经有plan，则不创建新的plan
+                    logger.info(
+                        "already have a plan {}".format(self.planning_tool.plans)
                     )
-                    # return f"Failed to create plan for: {input_text}"
+                    self.active_plan_id = list(self.planning_tool.plans.keys())[-1]
+                    self.memory.add_message(Message.user_message(input_text))
+                else:
+                    # 没有plan，创建新的plan
+                    logger.info("no plan, create new plan")
+                    await self._create_initial_plan(input_text)
+                    # Verify plan was created successfully
+                    if self.active_plan_id not in self.planning_tool.plans:
+                        logger.error(
+                            f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool {self.planning_tool.plans}."
+                        )
+                        # return f"Failed to create plan for: {input_text}"
 
             # 保存session
             if self.session_id:

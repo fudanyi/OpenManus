@@ -16,7 +16,10 @@ from app.tool.str_replace_editor import StrReplaceEditor
 # from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
 from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
-from extensions.prompt.planner import NEXT_STEP_PROMPT as PLANNER_NEXT_STEP_PROMPT, SYSTEM_PROMPT as PLANNER_SYSTEM_PROMPT
+from extensions.prompt.planner import (
+    NEXT_STEP_PROMPT as PLANNER_NEXT_STEP_PROMPT,
+    SYSTEM_PROMPT as PLANNER_SYSTEM_PROMPT,
+)
 from extensions.tool.data_source import DataSource
 from extensions.tool.final_result import FinalResult
 from extensions.tool.human_input import HumanInput
@@ -35,11 +38,11 @@ class Planner(ToolCallAgent):
         "An planning assistant that focus on creating a plan for a given task"
     )
 
-    system_prompt: str = PLANNER_SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
-
+    system_prompt: str = PLANNER_SYSTEM_PROMPT.format(
+        current_date=datetime.datetime.now().strftime("%Y-%m-%d")
+    )
 
     next_step_prompt: str = PLANNER_NEXT_STEP_PROMPT
-
 
     max_observe: int = 10000
     max_steps: int = 20
