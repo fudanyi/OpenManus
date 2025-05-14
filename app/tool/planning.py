@@ -26,15 +26,11 @@ class PlanningTool(BaseTool):
         "type": "object",
         "properties": {
             "command": {
-                "description": "The command to execute. Available commands: create, update, list, get, set_active, mark_step, delete.",
+                "description": "The command to execute. Available commands: create, update, get.",
                 "enum": [
                     "create",
                     "update",
-                    "list",
                     "get",
-                    "set_active",
-                    "mark_step",
-                    "delete",
                 ],
                 "type": "string",
             },
@@ -47,7 +43,7 @@ class PlanningTool(BaseTool):
                 "type": "string",
             },
             "sections": {
-                "description": "List of sections, each containing a title and steps. Required for create command, optional for update command.",
+                "description": "List of sections, each containing a title, steps and types of steps. Required for create command, optional for update command.",
                 "type": "array",
                 "items": {
                     "type": "object",
@@ -56,23 +52,14 @@ class PlanningTool(BaseTool):
                         "steps": {
                             "type": "array",
                             "items": {"type": "string"}
+                        },
+                        "types": {
+                            "type": "array",
+                            "items": {"type": "string"}
                         }
                     },
                     "required": ["title", "steps"]
                 }
-            },
-            "step_index": {
-                "description": "Index of the step to update (0-based). Required for mark_step command.",
-                "type": "integer",
-            },
-            "step_status": {
-                "description": "Status to set for a step. Used with mark_step command.",
-                "enum": ["not_started", "in_progress", "completed", "blocked"],
-                "type": "string",
-            },
-            "step_notes": {
-                "description": "Additional notes for a step, should contain important information which can be used for final analysis report/deliverable. Optional for mark_step command.",
-                "type": "string",
             },
         },
         "required": ["command"],
@@ -174,7 +161,7 @@ class PlanningTool(BaseTool):
 
         Output.print(
             type="createPlan",
-            text=f"Plan {plan_id} created",
+            text=f"计划 {plan_id} 创建完毕",
             data=plan,
         )
 
@@ -431,7 +418,7 @@ class PlanningTool(BaseTool):
             for step in section["steps"]:
                 status = plan["step_statuses"][current_step_index]
                 notes = plan["step_notes"][current_step_index]
-                
+
                 status_symbol = {
                     "not_started": "[ ]",
                     "in_progress": "[→]",
@@ -442,7 +429,7 @@ class PlanningTool(BaseTool):
                 output += f"  {status_symbol} {step}\n"
                 if notes:
                     output += f"     Notes: {notes}\n"
-                
+
                 current_step_index += 1
             output += "\n"
 

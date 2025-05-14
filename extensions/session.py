@@ -2,10 +2,11 @@ import json
 import os
 import uuid
 
-from app.logger import logger
+from app.agent.base import BaseAgent
 from app.config import PROJECT_ROOT
 from app.flow.flow_factory import FlowFactory, FlowType
 from app.flow.planning import PlanningFlow
+from app.logger import logger
 from app.schema import Message
 
 SESSION_FOLDER = "sessions"
@@ -34,14 +35,18 @@ def has_session(session_id: str):
     return os.path.exists(get_session_path(session_id))
 
 
-def load_flow_from_session(session_id: str, flow_type: FlowType, agents: dict):
+def load_flow_from_session(
+    session_id: str, flow_type: FlowType, agents: dict, planningAgent: BaseAgent
+):
     """
     加载session
     """
 
     flow = FlowFactory.create_flow(
+        session_id=session_id,
         flow_type=flow_type,
         agents=agents,
+        planningAgent=planningAgent,
     )
 
     try:
@@ -52,28 +57,47 @@ def load_flow_from_session(session_id: str, flow_type: FlowType, agents: dict):
 
             flow.active_plan_id = session.get("active_plan_id")
             flow.current_step_index = session.get("current_step_index")
+            flow.planning_tool.plans = session.get("plans")
+            flow.memory.add_messages(
+                [
+                    Message(
+                        role=session_message.get("role"),
+                        content=session_message.get("content"),
+                        tool_calls=session_message.get("tool_calls"),
+                        name=session_message.get("name"),
+                        tool_call_id=session_message.get("tool_call_id"),
+                        base64_image=session_message.get("base64_image"),
+                    )
+                    for session_message in session.get("memory", [])
+                ]
+            )
             for agent_key, agent in flow.agents.items():
                 if agent_key in session:
                     session_agent = session[agent_key]
                     agent.current_step = session_agent.get("current_step")
                     agent.state = session_agent.get("state")
-                    agent.next_step_prompt = session_agent.get("next_step_prompt")
-                    agent.memory.add_messages(
-                        [
-                            Message(
-                                role=session_message.get("role"),
-                                content=session_message.get("content"),
-                                tool_calls=session_message.get("tool_calls"),
-                                name=session_message.get("name"),
-                                tool_call_id=session_message.get("tool_call_id"),
-                                base64_image=session_message.get("base64_image"),
-                            )
-                            for session_message in session_agent.get("messages", [])
-                        ]
-                    )
+                    if flow.memory:
+                        agent.memory = flow.memory
+                    else:
+                        agent.memory.add_messages(
+                            [
+                                Message(
+                                    role=session_message.get("role"),
+                                    content=session_message.get("content"),
+                                    tool_calls=session_message.get("tool_calls"),
+                                    name=session_message.get("name"),
+                                    tool_call_id=session_message.get("tool_call_id"),
+                                    base64_image=session_message.get("base64_image"),
+                                )
+                                for session_message in session_agent.get("messages", [])
+                            ]
+                        )
+
+            if not flow.memory:
+                flow.memory = flow.agents[list(flow.agents.keys())[0]].memory
 
     except Exception as e:
-        logger.error(f"load_session error: {e}")
+        logger.error(f"load_session error: {str(e)}")
 
     return flow
 
@@ -87,12 +111,13 @@ def save_flow_to_session(session_id: str, flow: PlanningFlow):
         session = {
             "active_plan_id": flow.active_plan_id,
             "current_step_index": flow.current_step_index,
+            "plans": flow.planning_tool.plans,
+            "memory": flow.memory.to_dict_list(),
         }
         for agent_key, agent in flow.agents.items():
             session[agent_key] = {
                 "current_step": agent.current_step,
                 "state": agent.state,
-                "next_step_prompt": agent.next_step_prompt,
                 "messages": agent.memory.to_dict_list(),
             }
 

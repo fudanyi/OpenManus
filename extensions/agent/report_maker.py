@@ -1,42 +1,41 @@
 import datetime
-import os
-from typing import Optional, Union
-
 from pydantic import Field
 
 from app.agent.toolcall import ToolCallAgent
 from app.config import config
 from app.tool import Terminate, ToolCollection
 from app.tool.bash import Bash
+
 from app.tool.file_saver import FileSaver
-from app.tool.pwsh import Powershell
+
+# from app.tool.planning import PlanningTool
+from extensions.tool.python_execute import PythonExecute
 from app.tool.str_replace_editor import StrReplaceEditor
 
 # from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
-from extensions.prompt.data_analyst import NEXT_STEP_PROMPT, SYSTEM_PROMPT
+from extensions.prompt.report_maker import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.data_source import DataSource
-from extensions.tool.final_result import FinalResult
 from extensions.tool.human_input import HumanInput
+from extensions.tool.final_result import FinalResult
+from extensions.tool.metabase_tool import MetabaseTool
 
-# from app.tool.planning import PlanningTool
-from extensions.tool.python_execute import PythonExecute
 
-
-class DataAnalyst(ToolCallAgent):
+class ReportMaker(ToolCallAgent):
     """
-    A data analysis agent that uses planning to solve various data analysis tasks.
+    A report maker agent that uses planning to solve various report making tasks.
 
-    This agent extends DataAnalysis with a comprehensive set of tools and capabilities,
+    This agent extends ToolCallAgent with a comprehensive set of tools and capabilities,
     including Python execution, web search, chart visualization.
     """
 
-    name: str = "DataAnalyst"
+    name: str = "ReportMaker"
     description: str = (
-        "An analytical agent that utilizes multiple tools to solve diverse data tasks"
+        "An report maker agent that utilizes multiple tools to solve diverse report making tasks"
     )
 
     system_prompt: str = SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
+            
     next_step_prompt: str = NEXT_STEP_PROMPT
 
     max_observe: int = 10000
@@ -48,15 +47,16 @@ class DataAnalyst(ToolCallAgent):
             Terminate(),
             HumanInput(),
             # PlanningTool(),
-            PythonExecute(),
+            # PythonExecute(),
             # ChartVisualization(),
-            DataSource(),
-            WebSearch(),
+            # DataSource(),
+            # WebSearch(),
             StrReplaceEditor(),
             FileSaver(),
-            Powershell() if os.name == "nt" else Bash(),
+            Bash(),
             # FinalResult(),
             # Terminal(),
+            MetabaseTool(),
         )
     )
 

@@ -1,4 +1,6 @@
+import json
 from typing import Optional
+
 from app.logger import logger
 from app.tool.base import BaseTool, ToolResult
 from extensions.output import Output
@@ -19,7 +21,7 @@ class HumanInput(BaseTool):
             "type": {
                 "type": "string",
                 "description": "The type of input to get",
-                "enum": ["new_datasource","feedback","others"],
+                "enum": ["new_datasource", "feedback", "others"],
             },
             "default": {
                 "type": "string",
@@ -47,20 +49,36 @@ class HumanInput(BaseTool):
             ToolResult: The user's input or the default value
         """
         try:
-            Output.print(
-                type="chat",
-                text=f"{prompt}",
-                data={
-                    "sender": "assistant",
-                    "type": type,
-                    "message": prompt,
-                },
-            )
+            # Output.print(
+            #     type="chat",
+            #     text=f"{prompt}",
+            #     data={
+            #         "sender": "assistant",
+            #         "type": type,
+            #         "message": prompt,
+            #     },
+            # )
 
             # Show prompt and get input
             if not prompt.endswith("\n"):
                 prompt += "\n"
             user_input = input(f"{prompt}").strip()
+
+            # 处理 JSON 格式的用户输入
+            try:
+                # 先去掉外层的双引号
+                input_str = user_input.strip('"')
+                # 将Python字典字符串转换为JSON格式
+                input_str = input_str.replace("'", '"').replace("None", "null")
+                input_json = json.loads(input_str)
+                user_input = (
+                    input_json["prompt"]
+                    if "prompt" in input_json
+                    else input_json["Prompt"]
+                )
+            except Exception:
+                # 如果不是 JSON 格式，保持原样
+                pass
 
             Output.print(
                 type="chat",
@@ -87,4 +105,3 @@ class HumanInput(BaseTool):
             logger.info("Performing human input tool cleanup")
         except Exception as e:
             logger.error(f"Error during cleanup: {e}")
-

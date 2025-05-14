@@ -2,10 +2,12 @@ from app.logger import logger
 from app.tool.base import BaseTool
 from extensions.output import Output
 
-_TERMINATE_DESCRIPTION = """Terminate the interaction when user asks for quit the task OR when the request is met of current step OR if the assistant cannot proceed further with the task.
-When user asks for quit the task, call this tool to end the work.
-When you have finished all the tasks, call this tool to end the work.
-When you cannot proceed further with the task, call this tool to end the work.
+_TERMINATE_DESCRIPTION = """Terminate current step or task:
+1. when the request is met of current step 
+2. if the assistant cannot proceed further with the task.
+3. use ask for quitting
+4. when you have finished all the tasks
+
 """
 
 
@@ -19,21 +21,26 @@ class Terminate(BaseTool):
                 "type": "string",
                 "description": "The finish status of the interaction.",
                 "enum": ["success", "failure"],
-            }
+            },
+            "target": {
+                "type": "string",
+                "description": "The target of termination.",
+                "enum": ["step", "task"],
+            },
         },
-        "required": ["status"],
+        "required": ["status", "target"],
     }
 
-    async def execute(self, status: str) -> str:
+    async def execute(self, status: str, target: str) -> str:
         """Finish the current execution"""
         try:
             logger.info(f"Terminating interaction with status: {status}")
 
-            Output.print(
-                type="terminate",
-                text=f"Terminating interaction with status: {status}",
-                data={"status": status},
-            )
+            # Output.print(
+            #     type="terminate",
+            #     text=f"Terminating interaction with status: {status}",
+            #     data={"status": status},
+            # )
 
             return f"The interaction has been completed with status: {status}"
         except Exception as e:

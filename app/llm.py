@@ -736,15 +736,65 @@ class LLM:
             # Check if the model supports images
             supports_images = self.model in MULTIMODAL_MODELS
 
+            # 1. 收集所有工具调用和响应
+            tool_calls = []
+            tool_responses = {}
+            for msg in messages:
+                if isinstance(msg, dict):
+                    msg = Message(**msg)
+                if msg.tool_calls is not None:  # 添加 None 检查
+                    for tool_call in msg.tool_calls:
+                        if tool_call is not None:  # 添加 None 检查
+                            tool_calls.append((msg, tool_call))
+                elif (
+                    msg.role == "tool" and msg.tool_call_id is not None
+                ):  # 添加 None 检查
+                    tool_responses[msg.tool_call_id] = msg
+
+            # 2. 重建消息序列
+            reconstructed_messages = []
+            for msg in messages:
+                if isinstance(msg, dict):
+                    msg = Message(**msg)
+                if (
+                    msg.role == "assistant" and msg.tool_calls is not None
+                ):  # 添加 None 检查
+                    # 对于包含工具调用的助手消息
+                    reconstructed_messages.append(msg)
+                    # 添加对应的工具响应
+                    for tool_call in msg.tool_calls:
+                        if (
+                            tool_call is not None and tool_call.id is not None
+                        ):  # 添加 None 检查
+                            if tool_call.id in tool_responses:
+                                reconstructed_messages.append(
+                                    tool_responses[tool_call.id]
+                                )
+                            else:
+                                # 添加空的工具响应
+                                reconstructed_messages.append(
+                                    Message(
+                                        role="tool",
+                                        tool_call_id=tool_call.id,
+                                        content="",
+                                    )
+                                )
+                elif msg.role != "tool":  # 跳过工具响应消息，因为已经处理过了
+                    reconstructed_messages.append(msg)
+
             # Format messages
             if system_msgs:
                 system_msgs = self.format_messages(system_msgs, supports_images)
-                messages = system_msgs + self.format_messages(messages, supports_images)
+                reconstructed_messages = system_msgs + self.format_messages(
+                    reconstructed_messages, supports_images
+                )
             else:
-                messages = self.format_messages(messages, supports_images)
+                reconstructed_messages = self.format_messages(
+                    reconstructed_messages, supports_images
+                )
 
             # Calculate input token count
-            input_tokens = self.count_message_tokens(messages)
+            input_tokens = self.count_message_tokens(reconstructed_messages)
 
             # If there are tools, calculate token count for tool descriptions
             tools_tokens = 0
@@ -769,7 +819,7 @@ class LLM:
             # Set up the completion request
             params = {
                 "model": self.model,
-                "messages": messages,
+                "messages": reconstructed_messages,
                 "tools": tools,
                 "tool_choice": tool_choice,
                 "timeout": timeout,
@@ -783,10 +833,6 @@ class LLM:
                 params["temperature"] = (
                     temperature if temperature is not None else self.temperature
                 )
-
-            # response: ChatCompletion = await self.client.chat.completions.create(
-            #     **params, stream=False
-            # )
 
             # Streaming request
             self.update_token_count(input_tokens)

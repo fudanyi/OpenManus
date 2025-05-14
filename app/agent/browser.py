@@ -7,7 +7,8 @@ from app.agent.toolcall import ToolCallAgent
 from app.logger import logger
 from app.prompt.browser import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from app.schema import Message, ToolChoice
-from app.tool import BrowserUseTool, Terminate, ToolCollection
+from app.tool import Terminate, ToolCollection
+from app.tool.browser_use_tool import BrowserUseTool
 
 
 class BrowserAgent(ToolCallAgent):

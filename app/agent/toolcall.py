@@ -49,7 +49,7 @@ class ToolCallAgent(ReActAgent):
         try:
             Output.print(
                 type="liveStatus",
-                text="Thinking...",
+                text="思考中...",
             )
 
             # check if last func message is a python tools call with image output, if yes need to call ask_tool_with_image
@@ -162,10 +162,10 @@ class ToolCallAgent(ReActAgent):
             )
             logger.info(f"🔧 Tool arguments: {tool_calls[0].function.arguments}")
 
-            Output.print(
-                type="liveStatus",
-                text=f"🧰 Tools being prepared: {[call.function.name for call in tool_calls]}",
-            )
+            # Output.print(
+            #     type="liveStatus",
+            #     text=f"🧰 准备工具: {[call.function.name for call in tool_calls]}",
+            # )
 
         try:
             if response is None:
@@ -223,14 +223,14 @@ class ToolCallAgent(ReActAgent):
 
             Output.print(
                 type="liveStatus",
-                text=f"Executing '{command.function.name}'...",
+                text=f"执行 '{command.function.name}'...",
             )
 
             result_raw = await self.execute_tool(command)
 
             Output.print(
                 type="liveStatus",
-                text=f"Completed '{command.function.name}'...",
+                text=f"完成 '{command.function.name}'...",
             )
 
             if self.max_observe:
@@ -278,7 +278,7 @@ class ToolCallAgent(ReActAgent):
 
             Output.print(
                 type="execute",
-                text=f"🔧 Activating tool '{name}'...",
+                text=f"🔧 激活工具 '{name}'...",
                 data={
                     "status": "executing",
                     "id": command.id,
