@@ -5,6 +5,7 @@ import json
 import os
 import time
 
+from extensions.agent.answerbot import AnswerBot
 import openpyxl
 import xlrd
 
@@ -208,6 +209,7 @@ async def run_flow(session_id: str):
     agents = {
         "dataAnalyst": DataAnalyst(),
         "reportMaker": ReportMaker(),
+        "answerbot": AnswerBot(),
     }
 
     planningAgent = Planner()
@@ -254,10 +256,11 @@ async def run_flow(session_id: str):
             logger.info(result)
             logger.info(f"Request processed in {elapsed_time:.2f} seconds")
 
-            Output.print(
-                type="chat",
-                text=f"{result}",
-                data={
+            if result is not None:
+                Output.print(
+                    type="chat",
+                    text=f"{result}",
+                    data={
                     "sender": "assistant",
                     "message": result,
                 },

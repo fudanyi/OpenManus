@@ -148,7 +148,7 @@ class PlanningFlow(BaseFlow):
                             {
                                 "title": "默认计划",
                                 "steps": [input_text],
-                                "types": ["dataAnalyst"]  # TODO: 应该有一个万能agent在这里， 包括DA+reportmaker所有TOOL， focus on快速完成用户的明确任务
+                                "types": ["answerbot"]
                             }
                         ],
                         "step_statuses": ["not_started"],
@@ -170,8 +170,29 @@ class PlanningFlow(BaseFlow):
 
                 # Exit if no more steps or plan completed
                 if self.current_step_index is None:
-                    result = await self._finalize_plan()
-                    break
+                    # Check if the plan only has answerbot steps
+                    plan_data = self.planning_tool.plans.get(self.active_plan_id, {})
+                    sections = plan_data.get("sections", [])
+                    
+                    # Check if all steps are answerbot type
+                    only_answerbot = True
+                    for section in sections:
+                        types = section.get("types", [])
+                        for step_type in types:
+                            if step_type != "answerbot":
+                                only_answerbot = False
+                                break
+                        if not only_answerbot:
+                            break
+                    
+                    if only_answerbot:
+                        # If plan only has answerbot steps, skip finalization
+                        result = None;
+                        break
+                    else:
+                        # Otherwise finalize the plan
+                        result = await self._finalize_plan()
+                        break
 
                 Output.print(
                     type="liveStatus",

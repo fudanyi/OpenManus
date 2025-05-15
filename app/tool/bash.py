@@ -116,6 +116,7 @@ class _BashSession:
             text=f"Bash command output: {output}",
             data={
                 "command": command,
+                "success": True if error == "" else False,
                 "output": output,
                 "error": error,
             },
@@ -125,7 +126,12 @@ class _BashSession:
         self._process.stdout._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
         self._process.stderr._buffer.clear()  # pyright: ignore[reportAttributeAccessIssue]
 
-        return CLIResult(output=output, error=error)
+        return {
+                "command": command,
+                "success": True if error == "" else False,
+                "output": output,
+                "error": error,
+            }
 
 
 class Bash(BaseTool):
