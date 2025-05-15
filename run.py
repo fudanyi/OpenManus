@@ -129,13 +129,13 @@ def read_attachment(file_path: str) -> str:
                 file_content = ""
 
         if file_content:
-            return file_path + ":\n" + file_content + "\n"
+            return "- " + file_path + ":\n" + file_content + "\n"
         else:
-            return file_path + ":\nno preview\n"
+            return "- " + file_path + ":\nno preview\n"
 
     except Exception as e:
         logger.error(f"Failed to read attachment {file_path}: {str(e)}")
-        return file_path + ":\nno preview\n"
+        return "- " + file_path + ":\nno preview\n"
 
 
 def get_user_input():
