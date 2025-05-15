@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import csv
 import json
 import os
 import time
@@ -21,7 +22,9 @@ from extensions.session import (
 )
 
 SESSION_FOLDER = "sessions"
-MAX_ATTACHMENT_LENGTH = 300
+MAX_ATTACHMENT_LENGTH = 500
+MIN_ATTACHMENT_LINE_COUNT = 3
+MAX_ATTACHMENT_LINE_COUNT = 10
 
 
 def read_attachment(file_path: str) -> str:
@@ -57,18 +60,14 @@ def read_attachment(file_path: str) -> str:
                 # 返回md的前300字内容
                 file_content = f.read(MAX_ATTACHMENT_LENGTH)
         elif file_path.endswith(".csv"):
-            with open(file_path, "r", encoding="utf-8") as f:
-                # 返回csv的前30行内容，且保证总字数小于300字
-                lines = f.readlines()
-                if len(lines) > 30:
-                    lines = lines[:30]
-                # 确保内容不超过最大长度，同时保持行的完整性
-                for line in lines:
-                    file_content += line
-                    if len(file_content) <= MAX_ATTACHMENT_LENGTH:
-                        continue
-                    else:
-                        break
+            csv_reader = csv.reader(open(file_path, "r", encoding="utf-8"))
+            for i, row in enumerate(csv_reader):
+                file_content += ",".join(row) + "\n"
+                # 如果内容长度小于最大长度，或者行数小于2，则继续读取
+                if len(file_content) <= MAX_ATTACHMENT_LENGTH or i < MIN_ATTACHMENT_LINE_COUNT:
+                    continue
+                else:
+                    break
         elif file_path.endswith(".html"):
             with open(file_path, "r", encoding="utf-8") as f:
                 # 返回html的内容
@@ -77,11 +76,18 @@ def read_attachment(file_path: str) -> str:
             # 读取xlsx文件前30行内容
             workbook = openpyxl.load_workbook(file_path)
             sheet = workbook.active
-            for row in sheet.iter_rows(max_row=30):
+            for row in sheet.iter_rows(max_row=MAX_ATTACHMENT_LINE_COUNT):
                 # 将None值转换为空字符串
-                line = "".join([str(cell.value) if cell.value is not None else "" for cell in row]) + "\n"
-                file_content += line
-                if len(file_content) <= MAX_ATTACHMENT_LENGTH:
+                file_content += (
+                    ",".join(
+                        [
+                            str(cell.value) if cell.value is not None else ""
+                            for cell in row
+                        ]
+                    )
+                    + "\n"
+                )
+                if len(file_content) <= MAX_ATTACHMENT_LENGTH or i < MIN_ATTACHMENT_LINE_COUNT:
                     continue
                 else:
                     break
@@ -96,7 +102,7 @@ def read_attachment(file_path: str) -> str:
         if file_content:
             return file_path + ":\n" + file_content + "\n"
         else:
-            return file_path + "\n"
+            return file_path + ":\nno preview\n"
 
     except Exception as e:
         logger.error(f"Failed to read attachment {file_path}: {str(e)}")
