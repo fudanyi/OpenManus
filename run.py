@@ -6,6 +6,7 @@ import os
 import time
 
 import openpyxl
+import xlrd
 
 from app.config import WORKSPACE_ROOT
 from app.flow.flow_factory import FlowFactory, FlowType
@@ -90,7 +91,7 @@ def read_attachment(file_path: str) -> str:
             # 读取xlsx文件前30行内容
             workbook = openpyxl.load_workbook(file_path)
             sheet = workbook.active
-            for row in sheet.iter_rows(max_row=MAX_ATTACHMENT_LINE_COUNT):
+            for i, row in enumerate(sheet.iter_rows(max_row=MAX_ATTACHMENT_LINE_COUNT)):
                 # 将None值转换为空字符串
                 file_content += (
                     ",".join(
@@ -101,6 +102,20 @@ def read_attachment(file_path: str) -> str:
                     )
                     + "\n"
                 )
+                if len(file_content) <= MAX_ATTACHMENT_LENGTH or i < MIN_ATTACHMENT_LINE_COUNT:
+                    continue
+                else:
+                    break
+        elif file_path.endswith(".xls"):
+            # 读取xls文件前30行内容
+            workbook = xlrd.open_workbook(file_path)
+            sheet = workbook.sheet_by_index(0)
+            for i in range(min(sheet.nrows, MAX_ATTACHMENT_LINE_COUNT)):
+                row_values = []
+                for j in range(sheet.ncols):
+                    cell_value = sheet.cell_value(i, j)
+                    row_values.append(str(cell_value) if cell_value is not None else "")
+                file_content += ",".join(row_values) + "\n"
                 if len(file_content) <= MAX_ATTACHMENT_LENGTH or i < MIN_ATTACHMENT_LINE_COUNT:
                     continue
                 else:
