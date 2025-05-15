@@ -64,8 +64,9 @@ def read_attachment(file_path: str) -> str:
                     lines = lines[:30]
                 # 确保内容不超过最大长度，同时保持行的完整性
                 for line in lines:
-                    if len(file_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
-                        file_content += line
+                    file_content += line
+                    if len(file_content) <= MAX_ATTACHMENT_LENGTH:
+                        continue
                     else:
                         break
         elif file_path.endswith(".html"):
@@ -79,8 +80,9 @@ def read_attachment(file_path: str) -> str:
             for row in sheet.iter_rows(max_row=30):
                 # 将None值转换为空字符串
                 line = "".join([str(cell.value) if cell.value is not None else "" for cell in row]) + "\n"
-                if len(file_content) + len(line) <= MAX_ATTACHMENT_LENGTH:
-                    file_content += line
+                file_content += line
+                if len(file_content) <= MAX_ATTACHMENT_LENGTH:
+                    continue
                 else:
                     break
         else:
