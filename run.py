@@ -60,14 +60,28 @@ def read_attachment(file_path: str) -> str:
                 # 返回md的前300字内容
                 file_content = f.read(MAX_ATTACHMENT_LENGTH)
         elif file_path.endswith(".csv"):
-            csv_reader = csv.reader(open(file_path, "r", encoding="utf-8"))
-            for i, row in enumerate(csv_reader):
-                file_content += ",".join(row) + "\n"
-                # 如果内容长度小于最大长度，或者行数小于2，则继续读取
-                if len(file_content) <= MAX_ATTACHMENT_LENGTH or i < MIN_ATTACHMENT_LINE_COUNT:
-                    continue
-                else:
+            # 尝试不同的编码方式读取文件
+            encodings = ['utf-8', 'gbk', 'gb2312', 'gb18030']
+            file_content = ""
+            
+            for encoding in encodings:
+                try:
+                    with open(file_path, "r", encoding=encoding) as f:
+                        csv_reader = csv.reader(f)
+                        for i, row in enumerate(csv_reader):
+                            file_content += ",".join(row) + "\n"
+                            # 如果内容长度小于最大长度，或者行数小于2，则继续读取
+                            if len(file_content) <= MAX_ATTACHMENT_LENGTH or i < MIN_ATTACHMENT_LINE_COUNT:
+                                continue
+                            else:
+                                break
+                    # 如果成功读取，跳出编码尝试循环
                     break
+                except UnicodeDecodeError:
+                    continue
+                except Exception as e:
+                    logger.error(f"读取文件 {file_path} 时发生错误: {str(e)}")
+                    raise
         elif file_path.endswith(".html"):
             with open(file_path, "r", encoding="utf-8") as f:
                 # 返回html的内容
@@ -106,7 +120,7 @@ def read_attachment(file_path: str) -> str:
 
     except Exception as e:
         logger.error(f"Failed to read attachment {file_path}: {str(e)}")
-        return ""
+        return file_path + ":\nno preview\n"
 
 
 def get_user_input():
