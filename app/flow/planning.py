@@ -141,21 +141,21 @@ class PlanningFlow(BaseFlow):
                             f"Plan creation failed. Plan ID {self.active_plan_id} not found in planning tool {self.planning_tool.plans}."
                         )
 
-                    # Create a simple plan with the input text as the only step
-                    self.planning_tool.plans[self.active_plan_id] = {
-                        "title": input_text,
-                        "sections": [
-                            {
-                                "title": "默认计划",
-                                "steps": [input_text],
-                                "types": ["answerbot"]
-                            }
-                        ],
-                        "step_statuses": ["not_started"],
-                        "step_notes": [""]
-                    }
-                    logger.info(f"Created simple plan with input text as step: {input_text}")
-                    # return f"Failed to create plan for: {input_text}"
+                        # Create a simple plan with the input text as the only step
+                        self.planning_tool.plans[self.active_plan_id] = {
+                            "title": input_text,
+                            "sections": [
+                                {
+                                    "title": "默认计划",
+                                    "steps": [input_text],
+                                    "types": ["answerbot"]
+                                }
+                            ],
+                            "step_statuses": ["not_started"],
+                            "step_notes": [""]
+                        }
+                        logger.info(f"Created simple plan with input text as step: {input_text}")
+                        # return f"Failed to create plan for: {input_text}"
 
             # 保存session
             if self.session_id:
@@ -374,7 +374,7 @@ class PlanningFlow(BaseFlow):
             )
             return result.output if hasattr(result, "output") else str(result)
         except Exception as e:
-            logger.error(f"Error getting plan: {e}")
+            logger.error(f"Error getting plan: {str(e)}")
             return self._generate_plan_text_from_storage()
 
     def _generate_plan_text_from_storage(self) -> str:
