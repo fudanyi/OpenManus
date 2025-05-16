@@ -337,14 +337,14 @@ async def main():
             result = await agent.run(prompt)
             logger.info(f"Request processing completed.{result}")
 
-            Output.print(
-                type="chat",
-                text=f"{result}",
-                data={
-                    "sender": "assistant",
-                    "message": result,
-                },
-            )
+            # Output.print(
+            #     type="chat",
+            #     text=f"{result}",
+            #     data={
+            #         "sender": "assistant",
+            #         "message": result,
+            #     },
+            # )
 
             Output.print(
                 type="mainCompleted",
