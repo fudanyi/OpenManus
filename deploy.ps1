@@ -1,8 +1,8 @@
 # 部署OpenManus到服务器 /home/ubuntu/demo/python 下
 
-# 获取今天修改的文件
+# 获取今天修改的Python文件
 $today = Get-Date -Format "yyyy-MM-dd"
-$files = Get-ChildItem -Recurse -File | Where-Object { $_.LastWriteTime -gt (Get-Date).Date }
+$files = Get-ChildItem -Recurse -File -Filter "*.py" | Where-Object { $_.LastWriteTime -gt (Get-Date).Date }
 
 # 创建远程目录（如果不存在）
 ssh agent "mkdir -p /home/ubuntu/demo/python"
