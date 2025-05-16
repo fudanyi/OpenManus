@@ -30,12 +30,14 @@ Current date: {current_date}
 """
 
 NEXT_STEP_PROMPT = """
-Determine if you have enough information to create a plan for the given task. If you do not have enough information, ask human for more information only when absolutely needed.
-Do not output thinking. Do not query data.
+Proactively select the most appropriate tool or combination of tool. 
 
-If you have enough information, first judge it's complexity, then create/update a plan for the given task if neccesary. 
-If no plan is needed according to complexity evaluation, just call terminate tool.
-
-Ask for user confirmation aftering creating/update the plan.
-If user have no futher comments, terminate this step without saying anything, just call terminate tool.
+<guidance>
+- Make sure you have enough information and have judged complexity before making a plan.
+    - Ask for user confirmation after creating/update the plan.
+        - If user have no futher comments or say "ok", terminate this step without saying anything, just call terminate tool.
+    - If no plan is needed according to complexity evaluation, just call terminate tool.
+    - Ask human if you do not have enough information.
+- Do not output thinking. Do not query data. Do not re-evaluate complexity unless you have new information.
+</guidance>
 """ 
