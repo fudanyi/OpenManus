@@ -14,6 +14,8 @@ foreach ($file in $files) {
     
     # 确保远程目录存在
     $remoteDir = Split-Path $remotePath -Parent
+    $remoteDir = $remoteDir.Replace("\", "/")  # 将反斜杠转换为正斜杠
+    Write-Host "创建远程目录: $remoteDir"
     ssh agent "mkdir -p $remoteDir"
     
     # 传输文件

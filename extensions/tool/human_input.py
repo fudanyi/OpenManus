@@ -4,6 +4,7 @@ from typing import Optional
 from app.logger import logger
 from app.tool.base import BaseTool, ToolResult
 from extensions.output import Output
+from extensions.utils.user_input import get_user_input
 
 
 class HumanInput(BaseTool):
@@ -62,39 +63,33 @@ class HumanInput(BaseTool):
             # Show prompt and get input
             if not prompt.endswith("\n"):
                 prompt += "\n"
-            user_input = input(f"{prompt}").strip()
-
-            # 处理 JSON 格式的用户输入
-            try:
-                # 先去掉外层的双引号
-                input_str = user_input.strip('"')
-                # 将Python字典字符串转换为JSON格式
-                input_str = input_str.replace("'", '"').replace("None", "null")
-                input_json = json.loads(input_str)
-                user_input = (
-                    input_json["prompt"]
-                    if "prompt" in input_json
-                    else input_json["Prompt"]
-                )
-            except Exception:
-                # 如果不是 JSON 格式，保持原样
-                pass
+            user_input, attachments, user_input_with_attachment = get_user_input(
+                f"{prompt}"
+            )
 
             Output.print(
                 type="chat",
                 text=f"{user_input}",
                 data={
                     "sender": "user",
-                    "message": user_input,
                     "type": type,
+                    "message": user_input,
+                    "attachments": (
+                        [
+                            {"name": "attachments/" + attachment}
+                            for attachment in attachments
+                        ]
+                        if attachments
+                        else []
+                    ),
                 },
             )
 
             # Return default if input is empty and default is provided
-            if not user_input and default is not None:
+            if not user_input_with_attachment and default is not None:
                 return ToolResult(output=default)
 
-            return ToolResult(output=user_input)
+            return ToolResult(output=user_input_with_attachment)
         except Exception as e:
             logger.error(f"Error getting human input: {e}")
             return ToolResult(error=str(e))
