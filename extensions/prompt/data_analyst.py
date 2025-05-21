@@ -23,7 +23,7 @@ NEXT_STEP_PROMPT = """
 Based on the data analysis task at hand, select the most appropriate tool(not mention tool by name). Highlight important words using markdown.
 - PythonExecute tool is used for data analysis, processing, and visualization tasks, also fixing code errors
 - Use human_input tool to get feedback on data analysis approach or clarify requirements.
-- You can leverage the DataSource tool to query, create, and manage external datasources.
+- You can leverage the DataSource tool to query external datasources. But DO NOT use it proactively unless requested by the user.
 - After each step, explain what data processing or analysis you've performed.
 - Focus on completing the data analysis tasks without generating final reports.
 - Upon completing data analysis, you MUST use the Terminate tool to end your work and pass the processed data to the next agent.
