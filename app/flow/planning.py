@@ -122,14 +122,22 @@ class PlanningFlow(BaseFlow):
                     "planning"
                 )
 
+                has_plan = False
                 if (
                     self.active_plan_id
                     and self.active_plan_id in self.planning_tool.plans
                 ):
+                    current_step_index, step_info = await self._get_current_step_info()
+                    if current_step_index is not None:
+                        logger.info(
+                            "already have a running plan {}/{}".format(
+                                self.active_plan_id, current_step_index
+                            )
+                        )
+                        has_plan = True
+
+                if has_plan:
                     # 如果已经有plan，则不创建新的plan
-                    logger.info(
-                        "already have a plan {}".format(self.planning_tool.plans)
-                    )
                     self.memory.add_message(Message.user_message(input_text))
                 else:
                     # 没有plan，创建新的plan
@@ -148,13 +156,15 @@ class PlanningFlow(BaseFlow):
                                 {
                                     "title": "默认计划",
                                     "steps": [input_text],
-                                    "types": ["answerbot"]
+                                    "types": ["answerbot"],
                                 }
                             ],
                             "step_statuses": ["not_started"],
-                            "step_notes": [""]
+                            "step_notes": [""],
                         }
-                        logger.info(f"Created simple plan with input text as step: {input_text}")
+                        logger.info(
+                            f"Created simple plan with input text as step: {input_text}"
+                        )
                         # return f"Failed to create plan for: {input_text}"
 
             # 保存session
@@ -173,7 +183,7 @@ class PlanningFlow(BaseFlow):
                     # Check if the plan only has answerbot steps
                     plan_data = self.planning_tool.plans.get(self.active_plan_id, {})
                     sections = plan_data.get("sections", [])
-                    
+
                     # Check if all steps are answerbot type
                     only_answerbot = True
                     for section in sections:
@@ -184,10 +194,10 @@ class PlanningFlow(BaseFlow):
                                 break
                         if not only_answerbot:
                             break
-                    
+
                     if only_answerbot:
                         # If plan only has answerbot steps, skip finalization
-                        result = None;
+                        result = None
                         break
                     else:
                         # Otherwise finalize the plan
