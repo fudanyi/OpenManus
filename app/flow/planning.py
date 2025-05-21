@@ -17,7 +17,7 @@ from extensions.agent.planner import Planner
 from extensions.output import Output
 from extensions.tool.human_input import HumanInput
 from extensions.tool.result_reporter import ResultReporter
-
+from app.config import config
 
 class PlanStepStatus(str, Enum):
     """Enum class defining possible statuses of a plan step"""
@@ -202,6 +202,15 @@ class PlanningFlow(BaseFlow):
                 # Execute current step with appropriate agent
                 step_type = step_info.get("type") if step_info else None
                 executor = self.get_executor(step_type)
+
+                if config.llm["default"].enable_auto_summary:
+                    # summarize previous steps and start new step
+                    Output.print(
+                        type="liveStatus",
+                        text="准备下一步",
+                    )
+                    if self.current_step_index is not None and self.current_step_index > 0:
+                        await self._summarize_messages()
                 executor.memory = self.memory
                 step_result = await self._execute_step(executor, step_info)
                 result += step_result + "\n"
@@ -436,11 +445,64 @@ class PlanningFlow(BaseFlow):
             logger.error(f"Error generating plan text: {e}")
             return f"Error generating plan text: {str(e)}"
 
+    async def _summarize_messages(self) -> None:
+        """Summarize all messages in memory and reset memory to only contain original request and summary."""
+        try:
+            system_message = Message.system_message(
+                "You are a information extraction assistant."
+            )
+
+            # Get all current messages
+            user_messages = self.memory.messages.copy()
+            
+            # Add request for summary
+            user_messages.append(
+                Message.user_message(
+                "Your task is to summarize previous conversation(representing partial execution of an agent) into a comprehensive document that captures the insights, any fact details, any important information fetched,  any deliverables produced and any recommendation to avoid errors."
+                "The document must contain enough and correct details for subsequent execution to complete user goal without duplicate refetching/redoing， especially schema details."
+                "Assume subsequent execution only has access to this summary."
+                )
+            )
+
+            # Get summary from LLM
+            response = await self.llm.ask(
+                messages=user_messages,
+                system_msgs=[system_message],
+            )
+
+            if response is None:
+                logger.warning("No response received from LLM in _summarize_messages")
+                return
+
+            # Find the original user request (first user message)
+            original_request = None
+            for msg in self.memory.messages:
+                if msg.role == "user":
+                    original_request = msg
+                    break
+
+            if original_request is None:
+                logger.warning("No original user request found in memory")
+                return
+
+            # Get the summary content, handling both string and object responses
+            summary_content = response.content if hasattr(response, 'content') else str(response)
+
+            # Reset memory to only contain original request and summary
+            self.memory.messages = [
+                original_request,
+                *[msg for msg in self.memory.messages if msg.type == "summary"],
+                Message.summary_message("Summary of previous partial execution: \n" +"=============\n"+ summary_content+"\n=============\n")
+            ]
+
+        except Exception as e:
+            logger.error(f"Error summarizing messages: {e}")
+
     async def _finalize_plan(self) -> str:
         """Finalize the plan and provide a summary using the flow's LLM directly."""
         try:
             system_message = Message.system_message(
-                "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts."
+                "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts. "
             )
 
             self.memory.messages.append(

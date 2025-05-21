@@ -30,12 +30,13 @@ Current date: {current_date}
 """
 
 NEXT_STEP_PROMPT = """
-Proactively select the most appropriate tool or combination of tool. 
+Proactively select the most appropriate tool or combination of tools to complete planning of the task(not doing the task), must select one tool.
+If you have a plan and user does not want to modify, terminate.
 
 <guidance>
 - Make sure you have enough information and have judged complexity before making a plan.
-    - Ask for user confirmation after creating/update the plan.
-        - If user have no futher comments or say "ok", terminate this step without saying anything, just call terminate tool.
+- Ask for user confirmation right after creating/update the plan.
+    - If user have no futher comments or say "ok", terminate this step without saying anything, just call terminate tool.
     - If no plan is needed according to complexity evaluation, just call terminate tool.
     - Ask human if you do not have enough information.
 - Do not output thinking. Do not query data. Do not re-evaluate complexity unless you have new information.

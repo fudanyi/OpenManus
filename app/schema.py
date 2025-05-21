@@ -60,6 +60,7 @@ class Message(BaseModel):
     name: Optional[str] = Field(default=None)
     tool_call_id: Optional[str] = Field(default=None)
     base64_image: Optional[str] = Field(default=None)
+    type: Optional[str] = Field(default=None)
 
     def __add__(self, other) -> List["Message"]:
         """支持 Message + list 或 Message + Message 的操作"""
@@ -94,6 +95,8 @@ class Message(BaseModel):
             message["tool_call_id"] = self.tool_call_id
         if self.base64_image is not None:
             message["base64_image"] = self.base64_image
+        if self.type is not None:
+            message["type"] = self.type
         return message
 
     @classmethod
@@ -114,6 +117,11 @@ class Message(BaseModel):
     ) -> "Message":
         """Create an assistant message"""
         return cls(role=Role.ASSISTANT, content=content, base64_image=base64_image)
+
+    @classmethod
+    def summary_message(cls, content: str) -> "Message":
+        """Create a summary message"""
+        return cls(role=Role.USER, content=content, type="summary")
 
     @classmethod
     def tool_message(

@@ -28,6 +28,7 @@ class LLMSettings(BaseModel):
     temperature: float = Field(1.0, description="Sampling temperature")
     api_type: str = Field(..., description="Azure, Openai, or Ollama")
     api_version: str = Field(..., description="Azure Openai version if AzureOpenai")
+    enable_auto_summary: bool = Field(False, description="Whether to enable automatic summarization of responses")
 
 
 class ProxySettings(BaseModel):
@@ -159,6 +160,7 @@ class Config:
             "temperature": base_llm.get("temperature", 1.0),
             "api_type": base_llm.get("api_type", ""),
             "api_version": base_llm.get("api_version", ""),
+            "enable_auto_summary": base_llm.get("enable_auto_summary", False),
         }
 
         # handle browser config.
