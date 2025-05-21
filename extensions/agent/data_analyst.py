@@ -21,7 +21,7 @@ from extensions.tool.human_input import HumanInput
 
 # from app.tool.planning import PlanningTool
 from extensions.tool.python_execute import PythonExecute
-
+from extensions.tool.browser_use import BrowserUseTool
 
 class DataAnalyst(ToolCallAgent):
     """
@@ -57,6 +57,7 @@ class DataAnalyst(ToolCallAgent):
             Powershell() if os.name == "nt" else Bash(),
             # FinalResult(),
             # Terminal(),
+            # BrowserUseTool(),
         )
     )
 
