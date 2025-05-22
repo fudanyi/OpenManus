@@ -63,6 +63,7 @@ class PythonExecute(BaseTool):
 
     def _run_code(self, code: str, result_dict: dict, safe_globals: dict) -> None:
         original_stdout = sys.stdout
+        original_stderr = sys.stderr
         try:
             class RealtimeStringIO(StringIO):
                 def write(self, s):
@@ -72,7 +73,8 @@ class PythonExecute(BaseTool):
 
             output_buffer = RealtimeStringIO()
             sys.stdout = output_buffer
-            
+            sys.stderr = output_buffer
+
             # 捕获警告但不将其视为错误
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -84,6 +86,7 @@ class PythonExecute(BaseTool):
             result_dict["charts"] = []
         finally:
             sys.stdout = original_stdout
+            sys.stderr = original_stderr
 
     async def execute(
         self,
@@ -153,7 +156,7 @@ class PythonExecute(BaseTool):
                 time.sleep(0.1)  # 避免过于频繁的检查
                 if "observation" in result and result["observation"] != last_output:
                     # 去掉已经输出过的，只保留新增内容
-                    new_output = result["observation"][len(last_output):]
+                    new_output = result["observation"][len(last_output) :]
                     if new_output:
                         Output.print(
                             type="python_execute_streaming",

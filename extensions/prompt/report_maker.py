@@ -13,6 +13,7 @@ For Report in webpage:
       - use versioned plotly js library(= 3.0.1), not latest
    - must have enough explanation/context on report like a professional report
    - do not move data files
+   - let webpage load data from data files by javascript, DO NOT hard code data in html
    - ready for print
 
 For Dashboards:

@@ -17,7 +17,7 @@ from extensions.agent.planner import Planner
 from extensions.output import Output
 from extensions.tool.human_input import HumanInput
 from extensions.tool.result_reporter import ResultReporter
-
+from app.config import config
 
 class PlanStepStatus(str, Enum):
     """Enum class defining possible statuses of a plan step"""
@@ -122,14 +122,22 @@ class PlanningFlow(BaseFlow):
                     "planning"
                 )
 
+                has_plan = False
                 if (
                     self.active_plan_id
                     and self.active_plan_id in self.planning_tool.plans
                 ):
+                    current_step_index, step_info = await self._get_current_step_info()
+                    if current_step_index is not None:
+                        logger.info(
+                            "already have a running plan {}/{}".format(
+                                self.active_plan_id, current_step_index
+                            )
+                        )
+                        has_plan = True
+
+                if has_plan:
                     # 如果已经有plan，则不创建新的plan
-                    logger.info(
-                        "already have a plan {}".format(self.planning_tool.plans)
-                    )
                     self.memory.add_message(Message.user_message(input_text))
                 else:
                     # 没有plan，创建新的plan
@@ -148,13 +156,15 @@ class PlanningFlow(BaseFlow):
                                 {
                                     "title": "默认计划",
                                     "steps": [input_text],
-                                    "types": ["answerbot"]
+                                    "types": ["answerbot"],
                                 }
                             ],
                             "step_statuses": ["not_started"],
-                            "step_notes": [""]
+                            "step_notes": [""],
                         }
-                        logger.info(f"Created simple plan with input text as step: {input_text}")
+                        logger.info(
+                            f"Created simple plan with input text as step: {input_text}"
+                        )
                         # return f"Failed to create plan for: {input_text}"
 
             # 保存session
@@ -173,7 +183,7 @@ class PlanningFlow(BaseFlow):
                     # Check if the plan only has answerbot steps
                     plan_data = self.planning_tool.plans.get(self.active_plan_id, {})
                     sections = plan_data.get("sections", [])
-                    
+
                     # Check if all steps are answerbot type
                     only_answerbot = True
                     for section in sections:
@@ -184,10 +194,10 @@ class PlanningFlow(BaseFlow):
                                 break
                         if not only_answerbot:
                             break
-                    
+
                     if only_answerbot:
                         # If plan only has answerbot steps, skip finalization
-                        result = None;
+                        result = None
                         break
                     else:
                         # Otherwise finalize the plan
@@ -202,6 +212,15 @@ class PlanningFlow(BaseFlow):
                 # Execute current step with appropriate agent
                 step_type = step_info.get("type") if step_info else None
                 executor = self.get_executor(step_type)
+
+                if config.llm["default"].enable_auto_summary:
+                    # summarize previous steps and start new step
+                    Output.print(
+                        type="liveStatus",
+                        text="准备下一步",
+                    )
+                    if self.current_step_index is not None and self.current_step_index > 0:
+                        await self._summarize_messages()
                 executor.memory = self.memory
                 step_result = await self._execute_step(executor, step_info)
                 result += step_result + "\n"
@@ -436,11 +455,64 @@ class PlanningFlow(BaseFlow):
             logger.error(f"Error generating plan text: {e}")
             return f"Error generating plan text: {str(e)}"
 
+    async def _summarize_messages(self) -> None:
+        """Summarize all messages in memory and reset memory to only contain original request and summary."""
+        try:
+            system_message = Message.system_message(
+                "You are a information extraction assistant."
+            )
+
+            # Get all current messages
+            user_messages = self.memory.messages.copy()
+            
+            # Add request for summary
+            user_messages.append(
+                Message.user_message(
+                "Your task is to summarize previous conversation(representing partial execution of an agent) into a comprehensive document that captures the insights, any fact details, any important information fetched,  any deliverables produced and any recommendation to avoid errors."
+                "The document must contain enough and correct details for subsequent execution to complete user goal without duplicate refetching/redoing， especially schema details."
+                "Assume subsequent execution only has access to this summary."
+                )
+            )
+
+            # Get summary from LLM
+            response = await self.llm.ask(
+                messages=user_messages,
+                system_msgs=[system_message],
+            )
+
+            if response is None:
+                logger.warning("No response received from LLM in _summarize_messages")
+                return
+
+            # Find the original user request (first user message)
+            original_request = None
+            for msg in self.memory.messages:
+                if msg.role == "user":
+                    original_request = msg
+                    break
+
+            if original_request is None:
+                logger.warning("No original user request found in memory")
+                return
+
+            # Get the summary content, handling both string and object responses
+            summary_content = response.content if hasattr(response, 'content') else str(response)
+
+            # Reset memory to only contain original request and summary
+            self.memory.messages = [
+                original_request,
+                *[msg for msg in self.memory.messages if msg.type == "summary"],
+                Message.summary_message("Summary of previous partial execution: \n" +"=============\n"+ summary_content+"\n=============\n")
+            ]
+
+        except Exception as e:
+            logger.error(f"Error summarizing messages: {e}")
+
     async def _finalize_plan(self) -> str:
         """Finalize the plan and provide a summary using the flow's LLM directly."""
         try:
             system_message = Message.system_message(
-                "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts."
+                "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts. "
             )
 
             self.memory.messages.append(

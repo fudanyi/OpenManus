@@ -122,10 +122,15 @@ Interact with external datasources. Use this tool to list all tables, retrieve s
 
             elif operation == "get_table_schema":
                 if not table_id:
-                    return json.dumps(
+                    if table_name:
+                        # handle common LLM error
+                        _, result = self._api.get_table_by_name(table_name)
+                    else:
+                        return json.dumps(
                         {"error": "Table ID is required for get_table_schema operation"}
-                    )
-                result = self._api.get_table_schema(table_id)
+                        )
+                else:
+                    result = self._api.get_table_schema(table_id)
 
             elif operation == "query_data":
                 if not sql_query:
