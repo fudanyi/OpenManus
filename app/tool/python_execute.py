@@ -74,7 +74,7 @@ class PythonExecute(BaseTool):
             output_buffer = RealtimeStringIO()
             sys.stdout = output_buffer
             sys.stderr = output_buffer
-            
+
             # 捕获警告但不将其视为错误
             with warnings.catch_warnings():
                 warnings.simplefilter("ignore")
@@ -156,7 +156,7 @@ class PythonExecute(BaseTool):
                 time.sleep(0.1)  # 避免过于频繁的检查
                 if "observation" in result and result["observation"] != last_output:
                     # 去掉已经输出过的，只保留新增内容
-                    new_output = result["observation"][len(last_output):]
+                    new_output = result["observation"][len(last_output) :]
                     if new_output:
                         Output.print(
                             type="python_execute_streaming",
