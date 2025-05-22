@@ -3,6 +3,9 @@ import httpx
 from mcp.server.fastmcp import FastMCP
 import sys
 import asyncio
+import os
+from extensions.output import Output
+from app.config import WORKSPACE_ROOT
 
 # Initialize FastMCP server
 mcp = FastMCP("metabase")
@@ -12,12 +15,58 @@ METABASE_URL = "http://111.231.167.99:3000"
 METABASE_USER = "silver.sun@encootech.com"
 METABASE_PASSWORD = "y79S6djYpqUdCA"
 METABASE_DATABASE_ID = 2
+OC_TOKEN = "Bearer eyJhbGciOiJSUzI1NiIsImtpZCI6IjIzOEQ3RkNEMEJEMDczNDk5NjZDQ0E1NUQ4MkZCQkNGRERBRUE5QkIiLCJ0eXAiOiJKV1QifQ.eyJ1c2VyaWQiOiJiZDI0YmRlOS0zODAyLTRjNWYtYmU1Ni04ZWJiNTk2OTYzYWMiLCJkZWZhdWx0X3RpbWV6b25laWQiOiJDaGluYSBTdGFuZGFyZCBUaW1lIiwic3ViIjoiMjciLCJjbGllbnRfaWQiOiJ0cmlub19hYmNfZGV2IiwiY2xpZW50X25hbWUiOiJ0cmlub19hYmNfZGV2IiwicGhvbmVfbnVtYmVyIjoiMTczMjExMjkxNDEiLCJlbWFpbCI6IiIsInNjb3BlIjpbIm9mZmxpbmVfYWNjZXNzIiwib3BlbmlkIiwicHJvZmlsZSIsImFwaWdhdGV3YXkiLCJjb25zb2xlX2FkbWluIl0sIm5iZiI6MTc0NTk5MTIxNCwiZXhwIjoyMDYxNTQ3MjAwLCJpc3MiOiJodHRwczovL2FiY2F1dGgtZGV2LmJvdHRpbWUuY29tIiwiYXVkIjoiYXBpZ2F0ZXdheSJ9.Mt9n1UAU1wkEKo7RYFPBPQblg_c3TM8icE17IxWypf-Q3TUSKJza22YTDNKNTazipZJroVu2VrLLsbXfro059vQX_7YUeiMACVI8dVpA4EX3V6Il7oP3MaNNoJ0k0scrgQ3lbXX9Hr5ojPa5OddOY55mpS-3tzOpHmj5MgXmLU7knMj4kS1Iq9EfMXxsbZb9_AWL97oW_b8hAJNGI3RJjC9JJusIJO-RGrbaIJ6IlgJBWENDc9d3uKqb-bJapRt9RxtgnsK1VZOJi67FZH3oIjkOGSWhZUQFlc_H1DRUKSrynPZtzFRco6Ao8Dp9D0a3cL0-cNb2afNHFMquLpyTEQ"
+OC_URL = "https://abcapi-dev.bottime.com"
 
 def log_debug(message: str):
     """输出调试日志到stderr"""
     print(message, file=sys.stderr)
 
+async def execute_query(sql_query: str) -> Dict[str, Any]:
+    """
+    Execute SQL query and return the result data
 
+    Args:
+        sql_query: SQL query to execute
+
+    Returns:
+        Dict containing query result data and metadata
+    """
+    try:
+        if not await metabase_api.authenticate():
+            return {"error": "Failed to connect to Metabase, please check authentication"}
+
+        # Get database ID
+        database_id = METABASE_DATABASE_ID
+        
+        # Execute query
+        question_data = {
+            "type": "native",
+            "native": {
+                "query": sql_query,
+                "template-tags": {}
+            },
+            "database": database_id
+        }
+
+        async with httpx.AsyncClient(timeout=30) as client:
+            response = await client.post(
+                f"{METABASE_URL}/api/dataset",
+                json=question_data,
+                headers=metabase_api.headers
+            )
+            response.raise_for_status()
+            data = response.json()
+            
+            return {
+                "data": data.get("data", {}).get("rows", []),
+                "columns": data.get("data", {}).get("cols", []),
+                "row_count": len(data.get("data", {}).get("rows", [])),
+                "column_count": len(data.get("data", {}).get("cols", []))
+            }
+    except Exception as e:
+        return {"error": f"Failed to execute query: {str(e)}"}
+    
 async def get_table_structure(table_name: str):
     """通过Metabase API获取表结构和前10条数据"""
     try:
@@ -27,69 +76,26 @@ async def get_table_structure(table_name: str):
         if not hasattr(metabase_api, 'session_token') or not metabase_api.session_token:
             await metabase_api.authenticate()
 
-        # 使用固定的数据库ID
-        database_id = METABASE_DATABASE_ID
-
-        # 使用Metabase API获取表结构
-        async with httpx.AsyncClient(timeout=30.0) as client:
-            # 获取表结构
-            structure_url = f"{METABASE_URL}/api/database/{database_id}/metadata"
-            log_debug(f"[get_table_structure] Requesting table structure from: {structure_url}")
-            
-            structure_response = await client.get(
-                structure_url,
-                headers=metabase_api.headers
-            )
-            structure_response.raise_for_status()
-            structure_data = structure_response.json()
-            
-            # 找到目标表
-            target_table = None
-            for table in structure_data.get("tables", []):
-                if table.get("name") == table_name:
-                    target_table = table
-                    break
-            
-            if not target_table:
-                raise ValueError(f"Table {table_name} not found in database")
-            
-            # 获取列信息
-            columns = []
-            for field in target_table.get("fields", []):
+        # 获取列信息
+        columns = []
+        result = await execute_query(f"show columns from {table_name}")
+        for row in result['data']:
+            if len(row) >= 2:
                 columns.append([
-                    field.get("name"),
-                    field.get("base_type"),
-                    field.get("dimension", {}).get("max_length")
+                    row[0],
+                    row[1]
                 ])
-            
-            log_debug(f"[get_table_structure] Start to get sample data for: {table_name}")
-            # 获取样例数据
-            sample_query = f"SELECT * FROM {table_name} LIMIT 10"
-            sample_data = {
-                "type": "native",
-                "native": {
-                    "query": sample_query,
-                    "template-tags": {}
-                },
-                "database": METABASE_DATABASE_ID
-            }
-            sample_response = await client.post(
-                f"{METABASE_URL}/api/dataset",
-                json=sample_data,
-                headers=metabase_api.headers
-            )
-            sample_response.raise_for_status()
-            sample_result = sample_response.json()
-            sample_rows = sample_result.get("data", {}).get("rows", [])
+            else:
+                log_debug(f"Skipping invalid row with insufficient data: {row}")
+        # 获取样例数据
+        sample_query = f"SELECT * FROM {table_name} LIMIT 10"
+        sample_result = await execute_query(sample_query)
+        sample_rows = sample_result['data']
 
-            log_debug(f"[get_table_structure] Successfully retrieved data:")
-            log_debug(f"- Number of columns: {len(columns)}")
-            log_debug(f"- Number of sample rows: {len(sample_rows)}")
-
-            return {
-                "columns": columns,
-                "sample_data": sample_rows
-            }
+        return {
+            "columns": columns,
+            "sample_data": sample_rows
+        }
     except Exception as e:
         log_debug(f"\n[get_table_structure] Failed to get table structure:")
         log_debug(f"- Error type: {type(e).__name__}")
@@ -98,6 +104,28 @@ async def get_table_structure(table_name: str):
         log_debug(f"- Error stack: {traceback.format_exc()}")
         raise
 
+async def get_oss_presigned_url(session_id: str):
+    async with httpx.AsyncClient(timeout=30) as client:
+        client.headers.update({
+            "Authorization": OC_TOKEN,
+            "x-jwt-payload-sub": "27",
+            "x-jwt-auth": "true"
+        })
+        response = await client.get(f"{OC_URL}/trino/metabase/presignUrl/{session_id}")
+        return response.json()
+
+def create_table(session_id: str, key: str, fileds: list[dict], table_name: str):
+    log_debug(f"[create_table] Creating table with key: {key}, fields: {fileds}")
+    with httpx.Client(timeout=30) as client:
+        client.headers.update({
+            "Authorization": OC_TOKEN,
+            "x-jwt-payload-sub": "27",
+            "x-jwt-auth": "true",
+            "Content-Type": "application/json"
+        })
+        response = client.post(f"{OC_URL}/trino/metabase/table/{session_id}?fileKey={key}", json=fileds)
+        return response.text
+    
 class MetabaseAPI:
     def __init__(self):
         self.session_token = None
@@ -123,251 +151,6 @@ class MetabaseAPI:
             except Exception as e:
                 log_debug(f"Authentication failed: {str(e)}")
                 return False
-
-
-    async def analyze_query_data(self, query: str) -> Dict[str, Any]:
-        """Analyze query data to determine the best visualization type"""
-        try:
-            log_debug(f"\nStarting data analysis...")
-            log_debug(f"Query: {query}")
-            
-            if not self.session_token:
-                await self.authenticate()
-
-            # Get database ID
-            database_id = METABASE_DATABASE_ID
-            log_debug(f"Database ID: {database_id}")
-            
-            # Execute sample query
-            sample_query = f"WITH sample AS ({query}) SELECT * FROM sample LIMIT 1000"
-            log_debug(f"Sample query: {sample_query}")
-            
-            question_data = {
-                "type": "native",
-                "native": {
-                    "query": sample_query,
-                    "template-tags": {}
-                },
-                "database": database_id
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{METABASE_URL}/api/dataset",
-                    json=question_data,
-                    headers=self.headers
-                )
-                response.raise_for_status()
-                data = response.json()
-                
-                if not data.get("data", {}).get("rows"):
-                    log_debug("Warning: Query returned empty result")
-                    return {"display": "table", "visualization_settings": {}}
-                
-                rows = data["data"]["rows"]
-                columns = data["data"]["cols"]
-                log_debug(f"\nData characteristics:")
-                log_debug(f"- Total rows: {len(rows)}")
-                log_debug(f"- Total columns: {len(columns)}")
-                
-                # Create column name to index mapping
-                col_name_to_idx = {col["name"]: idx for idx, col in enumerate(columns)}
-                
-                # Analyze data characteristics
-                numeric_columns = []
-                date_columns = []
-                categorical_columns = []
-                
-                log_debug("\nColumn type analysis:")
-                for col in columns:
-                    log_debug(f"- Column: {col['name']}, Type: {col['base_type']}")
-                    if col["base_type"] in ["type/Integer", "type/Float", "type/Decimal"]:
-                        numeric_columns.append(col["name"])
-                    elif col["base_type"] == "type/DateTime":
-                        date_columns.append(col["name"])
-                    else:
-                        categorical_columns.append(col["name"])
-                
-                log_debug(f"\nNumeric columns: {numeric_columns}")
-                log_debug(f"Date columns: {date_columns}")
-                log_debug(f"Categorical columns: {categorical_columns}")
-                
-                # Analyze numeric column distributions
-                numeric_distributions = {}
-                for col in numeric_columns:
-                    col_idx = col_name_to_idx[col]
-                    values = [row[col_idx] for row in rows if row[col_idx] is not None]
-                    if values:
-                        min_val = min(values)
-                        max_val = max(values)
-                        avg_val = sum(values) / len(values)
-                        std_dev = (sum((x - avg_val) ** 2 for x in values) / len(values)) ** 0.5
-                        numeric_distributions[col] = {
-                            "min": min_val,
-                            "max": max_val,
-                            "avg": avg_val,
-                            "std_dev": std_dev,
-                            "range": max_val - min_val
-                        }
-                        log_debug(f"\n{col} statistics:")
-                        log_debug(f"- Min: {min_val}")
-                        log_debug(f"- Max: {max_val}")
-                        log_debug(f"- Avg: {avg_val}")
-                        log_debug(f"- Std Dev: {std_dev}")
-                        log_debug(f"- Range: {max_val - min_val}")
-
-                # Analyze categorical column cardinalities
-                categorical_cardinalities = {}
-                for col in categorical_columns:
-                    col_idx = col_name_to_idx[col]
-                    values = [row[col_idx] for row in rows if row[col_idx] is not None]
-                    unique_values = len(set(values))
-                    categorical_cardinalities[col] = unique_values
-                    log_debug(f"\n{col} unique values count: {unique_values}")
-
-                # Determine visualization type
-                log_debug("\nSelecting visualization type:")
-                if len(date_columns) == 1 and len(numeric_columns) >= 1:
-                    if len(numeric_columns) == 1:
-                        log_debug("Selected: Line chart - Single metric over time")
-                        return {
-                            "display": "line",
-                            "visualization_settings": {
-                                "graph.dimensions": date_columns,
-                                "graph.metrics": numeric_columns[:1]
-                            }
-                        }
-                    else:
-                        log_debug("Selected: Area chart - Multiple metrics over time")
-                        return {
-                            "display": "area",
-                            "visualization_settings": {
-                                "graph.dimensions": date_columns,
-                                "graph.metrics": numeric_columns[:3]
-                            }
-                        }
-                elif len(categorical_columns) >= 1 and len(numeric_columns) >= 1:
-                    if len(numeric_columns) == 1:
-                        if categorical_cardinalities.get(categorical_columns[0], 0) <= 10:
-                            log_debug("Selected: Pie chart - Small number of categories")
-                            return {
-                                "display": "pie",
-                                "visualization_settings": {
-                                    "pie.dimension": categorical_columns[0],
-                                    "pie.metric": numeric_columns[0]
-                                }
-                            }
-                        else:
-                            log_debug("Selected: Bar chart - Large number of categories")
-                            return {
-                                "display": "bar",
-                                "visualization_settings": {
-                                    "graph.dimensions": categorical_columns[:1],
-                                    "graph.metrics": numeric_columns[:1]
-                                }
-                            }
-                    else:
-                        log_debug("Selected: Stacked bar chart - Multiple metrics by category")
-                        return {
-                            "display": "bar",
-                            "visualization_settings": {
-                                "graph.dimensions": categorical_columns[:1],
-                                "graph.metrics": numeric_columns[:3],
-                                "stackable.stack_type": "stacked"
-                            }
-                        }
-                elif len(numeric_columns) == 2:
-                    col1, col2 = numeric_columns
-                    col1_idx = col_name_to_idx[col1]
-                    col2_idx = col_name_to_idx[col2]
-                    dist1 = numeric_distributions[col1]
-                    dist2 = numeric_distributions[col2]
-                    
-                    values1 = [row[col1_idx] for row in rows if row[col1_idx] is not None and row[col2_idx] is not None]
-                    values2 = [row[col2_idx] for row in rows if row[col1_idx] is not None and row[col2_idx] is not None]
-                    
-                    if len(values1) > 1:
-                        mean1 = sum(values1) / len(values1)
-                        mean2 = sum(values2) / len(values2)
-                        covariance = sum((x - mean1) * (y - mean2) for x, y in zip(values1, values2)) / len(values1)
-                        correlation = covariance / (dist1["std_dev"] * dist2["std_dev"])
-                        log_debug(f"\n{col1} and {col2} correlation: {correlation}")
-                        
-                        if abs(correlation) > 0.5:
-                            log_debug("Selected: Scatter plot - Strong correlation")
-                            return {
-                                "display": "scatter",
-                                "visualization_settings": {
-                                    "scatter.dimension": col1,
-                                    "scatter.metric": col2,
-                                    "scatter.show_trendline": True
-                                }
-                            }
-                
-                log_debug("Selected: Table - Default visualization")
-                return {
-                    "display": "table",
-                    "visualization_settings": {
-                        "table.pivot": False,
-                        "table.cell_column": None
-                    }
-                }
-                    
-        except Exception as e:
-            log_debug(f"\nData analysis failed: {str(e)}")
-            import traceback
-            log_debug(f"Error stack: {traceback.format_exc()}")
-            return {"display": "table", "visualization_settings": {}}
-
-    async def create_question(self, name: str, query: str) -> Dict[str, Any]:
-        """Create a new question (query) in Metabase."""
-        try:
-            if not self.session_token:
-                await self.authenticate()
-
-            # 获取数据库ID
-            database_id = METABASE_DATABASE_ID
-            if not isinstance(database_id, int):
-                raise ValueError(f"数据库ID必须是整数，但得到的是 {type(database_id)}: {database_id}")
-
-            # 分析数据以确定最佳展示方式
-            display_settings = await self.analyze_query_data(query)
-
-            question_data = {
-                "name": name,
-                "dataset_query": {
-                    "type": "native",
-                    "native": {
-                        "query": query,
-                        "template-tags": {}
-                    },
-                    "database": database_id
-                },
-                "display": display_settings["display"],
-                "visualization_settings": display_settings["visualization_settings"]
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{METABASE_URL}/api/card",
-                    json=question_data,
-                    headers=self.headers
-                )
-                response.raise_for_status()
-                result = response.json()
-                
-                if not isinstance(result, dict):
-                    raise ValueError(f"API返回的数据格式错误: {result}")
-                    
-                return result
-        except httpx.HTTPError as e:
-            log_debug(f"HTTP错误: {str(e)}")
-            if hasattr(e, 'response') and e.response is not None:
-                log_debug(f"响应内容: {e.response.text}")
-            raise
-        except Exception as e:
-            log_debug(f"创建问题失败: {str(e)}")
-            raise
 
     async def create_dashboard(self, name: str, description: str) -> Dict[str, Any]:
         """Create a new dashboard in Metabase."""
@@ -818,66 +601,6 @@ class MetabaseAPI:
             log_debug(f"Failed to add text card to dashboard: {str(e)}")
             raise
 
-    async def create_database(
-        self,
-        name: str,
-        engine: str,  # "mysql" or "postgres"
-        host: str,
-        port: int,
-        dbname: str,
-        user: str,
-        password: str,
-        ssl: bool = False,
-    ) -> Dict[str, Any]:
-        """Create a new database connection in Metabase.
-        
-        Args:
-            name: Database name in Metabase
-            engine: Database type ("mysql" or "postgres")
-            host: Database host
-            port: Database port
-            dbname: Database name
-            user: Database username
-            password: Database password
-            ssl: Whether to use SSL connection
-        """
-        try:
-            if not self.session_token:
-                await self.authenticate()
-
-            # Prepare database details
-            details = {
-                "host": host,
-                "port": port,
-                "dbname": dbname,
-                "user": user,
-                "password": password,
-                "ssl": ssl,
-                "advanced-options": False
-            }
-
-            # Prepare database data
-            database_data = {
-                "name": name,
-                "engine": "mysql" if engine.lower() == "mysql" else "postgres",
-                "details": details,
-                "is_full_sync": True,
-                "is_on_demand": False,
-                "auto_run_queries": True
-            }
-
-            async with httpx.AsyncClient() as client:
-                response = await client.post(
-                    f"{METABASE_URL}/api/database",
-                    json=database_data,
-                    headers=self.headers
-                )
-                response.raise_for_status()
-                return response.json()
-        except Exception as e:
-            log_debug(f"Failed to create database: {str(e)}")
-            raise
-
 metabase_api = MetabaseAPI()
 
 @mcp.tool()
@@ -900,52 +623,6 @@ async def create_dashboard(dashboard_name: str, description: str) -> str:
     return f"Successfully created dashboard '{dashboard_name}', ID: {dashboard['id']}, view link: {public_link}"
 
 @mcp.tool()
-async def execute_query(sql_query: str) -> Dict[str, Any]:
-    """
-    Execute SQL query and return the result data
-
-    Args:
-        sql_query: SQL query to execute
-
-    Returns:
-        Dict containing query result data and metadata
-    """
-    try:
-        if not await metabase_api.authenticate():
-            return {"error": "Failed to connect to Metabase, please check authentication"}
-
-        # Get database ID
-        database_id = METABASE_DATABASE_ID
-        
-        # Execute query
-        question_data = {
-            "type": "native",
-            "native": {
-                "query": sql_query,
-                "template-tags": {}
-            },
-            "database": database_id
-        }
-
-        async with httpx.AsyncClient() as client:
-            response = await client.post(
-                f"{METABASE_URL}/api/dataset",
-                json=question_data,
-                headers=metabase_api.headers
-            )
-            response.raise_for_status()
-            data = response.json()
-            
-            return {
-                "data": data.get("data", {}).get("rows", []),
-                "columns": data.get("data", {}).get("cols", []),
-                "row_count": len(data.get("data", {}).get("rows", [])),
-                "column_count": len(data.get("data", {}).get("cols", []))
-            }
-    except Exception as e:
-        return {"error": f"Failed to execute query: {str(e)}"}
-
-@mcp.tool()
 async def create_question(
     question_name: str, 
     sql_query: str,
@@ -960,33 +637,27 @@ async def create_question(
         sql_query: SQL query
             - Field names in SQL must be enclosed in double quotes ("). For example: SELECT "field1", "field2" FROM "table"
             - Only use SQL syntax and functions supported by Trino (Presto). Do NOT use MySQL-specific or PostgreSQL-specific functions.
-        display_type: Optional display type for the visualization
+        display_type: display type for the visualization
             - table: Table view
             - line: Line chart
             - bar: Bar chart
             - area: Area chart
             - pie: Pie chart
             - scatter: Scatter plot
-        visualization_settings: Optional settings for the visualization
+        visualization_settings: settings for the visualization
             - For table: {"table.row_count": 10}
             - For line/bar/area: {"graph.dimensions": ["column1"], "graph.metrics": ["column2"]}
             - For pie: {"pie.dimension": "column1", "pie.metric": "column2"}
             - For scatter: {"scatter.dimension": "column1", "scatter.metric": "column2"}
-
-    Note:
-        If display_type and visualization_settings are not provided, the system will
-        automatically analyze the query result and determine the best visualization type.
     """
     try:
         if not await metabase_api.authenticate():
             return "Failed to connect to Metabase, please check authentication"
 
-        # 获取数据库ID
         database_id = METABASE_DATABASE_ID
         if not isinstance(database_id, int):
             raise ValueError(f"数据库ID必须是整数，但得到的是 {type(database_id)}: {database_id}")
 
-        # 如果提供了显示类型和设置，直接使用
         if display_type and visualization_settings:
             question_data = {
                 "name": question_name,
@@ -1002,21 +673,7 @@ async def create_question(
                 "visualization_settings": visualization_settings
             }
         else:
-            # 否则分析数据以确定最佳展示方式
-            display_settings = await metabase_api.analyze_query_data(sql_query)
-            question_data = {
-                "name": question_name,
-                "dataset_query": {
-                    "type": "native",
-                    "native": {
-                        "query": sql_query,
-                        "template-tags": {}
-                    },
-                    "database": database_id
-                },
-                "display": display_settings["display"],
-                "visualization_settings": display_settings["visualization_settings"]
-            }
+           log_debug(f"visualization_settings and display_type is required")
 
         async with httpx.AsyncClient() as client:
             response = await client.post(
@@ -1113,28 +770,10 @@ async def get_table_info(table_name: str) -> str:
         table_name: Table name
     """
     try:
-        log_debug(f"\n[get_table_info] Starting to get table info: {table_name}")
-
         if not await metabase_api.authenticate():
-            log_debug("[get_table_info] Metabase authentication failed")
             return "Failed to connect to Metabase, please check authentication"
 
-        log_debug(f"[get_table_info] Authentication successful, preparing to get table structure and sample data")
         table_info = await get_table_structure(table_name)
-        
-        # Check returned data structure
-        log_debug(f"\n[get_table_info] Retrieved table structure data:")
-        log_debug(f"- Has columns field: {'columns' in table_info}")
-        if 'columns' in table_info:
-            log_debug(f"- Number of columns: {len(table_info['columns'])}")
-            log_debug(f"- Columns content: {table_info['columns']}")
-        
-        log_debug(f"\n[get_table_info] Retrieved sample data:")
-        log_debug(f"- Has sample_data field: {'sample_data' in table_info}")
-        if 'sample_data' in table_info:
-            log_debug(f"- Number of sample rows: {len(table_info['sample_data'])}")
-            log_debug(f"- Sample data content: {table_info['sample_data']}")
-
         # Format output
         result = f"Table '{table_name}' structure:\n\n"
         result += "Columns:\n"
@@ -1148,14 +787,9 @@ async def get_table_info(table_name: str) -> str:
         for row in table_info["sample_data"]:
             result += f"{row}\n"
         
-        log_debug(f"\n[get_table_info] Final result length: {len(result)}")
         return result
     except Exception as e:
-        log_debug(f"\n[get_table_info] Failed to get table info:")
-        log_debug(f"- Error type: {type(e).__name__}")
-        log_debug(f"- Error message: {str(e)}")
         import traceback
-        log_debug(f"- Error stack: {traceback.format_exc()}")
         return f"Failed to get table info: {str(e)}"
 
 @mcp.tool()
@@ -1209,47 +843,38 @@ async def add_text_to_dashboard(
         return f"Failed to add text to dashboard: {str(e)}"
 
 @mcp.tool()
-async def create_datasource(
-    name: str,
-    engine: str,
-    host: str,
-    port: int,
-    dbname: str,
-    user: str,
-    password: str,
-    ssl: bool = False
-) -> str:
+async def create_dash_table(table_name: str, file_name: str, table_structure: list[dict]) -> str:
     """
-    Create a new database connection in Metabase
+    Import CSV data into database and create a new table
+
+    This function takes a CSV file and table structure definition, and creates a new table in database. 
+    The imported data will be used for data visualization and analysis in dashboards.
+    Return the name of the created table, which can be used in dashboard creation and query operations to visualize the imported data
 
     Args:
-        name: Database name in Metabase
-        engine: Database type ("mysql" or "postgres")
-        host: Database host
-        port: Database port
-        dbname: Database name
-        user: Database username
-        password: Database password
-        ssl: Whether to use SSL connection (default: False)
-
+        table_name: Import table name
+        file_name: Local file name
+        table_structure: Table structure, sample structure: [{"fieldName": "company","displayType": "TEXT"},{"fieldName": "address","displayType": "TEXT"}]
+            fieldName: Column name in the table
+            displayType supports the following types:
+            - TEXT: Text data type
+            - REAL: Floating-point number type
+            - INTEGER: Integer number type
+            - DATETIME: Date and time type
     """
-    try:
-        if not await metabase_api.authenticate():
-            return "Failed to connect to Metabase, please check authentication"
-
-        result = await metabase_api.create_database(
-            name=name,
-            engine=engine,
-            host=host,
-            port=port,
-            dbname=dbname,
-            user=user,
-            password=password,
-            ssl=ssl
-        )
-        return f"Successfully created database connection '{name}', ID: {result['id']}"
-    except Exception as e:
-        return f"Failed to create database connection: {str(e)}"
+    session_id = Output._current_session_id
+    presign_url_data = await get_oss_presigned_url(session_id)
+    key = presign_url_data['data']['key']
+    url = presign_url_data['data']['url']
+    file_path = os.path.join(WORKSPACE_ROOT+"/", file_name)
+    log_debug(f"upload file to oss, file_path: {file_path}, key: {key}, url: {url}")
+    with httpx.Client(timeout=30) as client:
+        with open(file_path, 'rb') as f:
+            response = client.put(url, data=f.read())
+            log_debug(f"File {file_name} uploaded to OSS successfully: {response.status_code}")
+    log_debug(f"create table, key: {key}")
+    log_debug(f"table_structure: {table_structure}")
+    return create_table(session_id, key, table_structure, table_name)
 
 if __name__ == "__main__":
     try:

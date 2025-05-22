@@ -13,7 +13,7 @@ from extensions.tool.data_source import DataSource
 from extensions.tool.final_result import FinalResult
 from extensions.tool.human_input import HumanInput
 from extensions.tool.python_execute import PythonExecute
-from extensions.tool.metabase_tool import MetabaseTool
+from OpenManus.extensions.tool.dash_maker_tool import DashmakerTool
 
 SYSTEM_PROMPT = """
 You are AnswerBot, an AI agent created by the Bayeslab team from China.
@@ -80,7 +80,7 @@ class AnswerBot(ToolCallAgent):
             FileSaver(),
             Bash(),
             FinalResult(),
-            MetabaseTool(),
+            DashmakerTool(),
         )
     )
 
