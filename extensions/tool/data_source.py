@@ -38,10 +38,6 @@ Interact with external datasources. Use this tool to list all tables, retrieve s
                 "type": "string",
                 "description": "(optional) The name of the table to operate on or create.",
             },
-            "keyword": {
-                "type": "string",
-                "description": "(optional) Keyword for fuzzy search when listing tables.",
-            },
             "sql_query": {
                 "type": "string",
                 "description": "(optional) SQL query to execute on the data source.",
@@ -77,7 +73,6 @@ Interact with external datasources. Use this tool to list all tables, retrieve s
         operation: str,
         table_id: Optional[str] = None,
         table_name: Optional[str] = None,
-        keyword: Optional[str] = None,
         sql_query: Optional[str] = None,
         fields: Optional[List[Dict[str, str]]] = None,
         data: Optional[str] = None,
@@ -89,7 +84,6 @@ Interact with external datasources. Use this tool to list all tables, retrieve s
             operation (str): The operation to perform on the data source.
             table_id (str, optional): The ID of the table to operate on.
             table_name (str, optional): The name of the table to operate on or create.
-            keyword (str, optional): Keyword for fuzzy search when listing tables.
             sql_query (str, optional): SQL query to execute on the data source.
             fields (List[Dict[str, str]], optional): Array of field definitions for creating or recreating a table.
             data (str, optional): Data string to upload to a table.
@@ -102,7 +96,7 @@ Interact with external datasources. Use this tool to list all tables, retrieve s
 
             if operation == "list_tables":
                 # Call the API method to list all tables
-                result = self._api.list_tables(keyword)
+                result = self._api.list_tables()
 
             elif operation == "get_table_by_id":
                 if not table_id:

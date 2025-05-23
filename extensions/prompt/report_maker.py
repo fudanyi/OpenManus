@@ -20,6 +20,7 @@ For Dashboards:
    - mix text/charts to form a good report
    - set appropriate size_y to text to make the report more readable
    - text and questions both occupy the same space
+   - Imported data will be used for data visualization and analysis in dashboards.
 
 You'll first make a text version of the report, then make a good structure like a pro developer.
 After generate all required website files, always enhance these files once and then finish.

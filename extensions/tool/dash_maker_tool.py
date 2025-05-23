@@ -1,6 +1,6 @@
 from typing import Dict, List, Optional
 from app.tool.base import BaseTool
-from OpenManus.extensions.tool.dash_maker import create_dashboard, create_question, add_question_to_dashboard, add_text_to_dashboard, get_table_info,create_dash_table
+from extensions.tool.dash_maker import create_dashboard, create_question, add_question_to_dashboard, add_text_to_dashboard, get_table_info,create_dash_table
 from extensions.tool.datatable_client.trino_client import TrinoDataTableClient
 
 class DashmakerTool(BaseTool):
@@ -73,8 +73,6 @@ Args:
 
 5. list_tables
 Get a list of all available tables.
-Args:
-    keyword (str, optional): Keyword for fuzzy search on table names and display names.
 Returns:
     list: A list of all tables.
 
@@ -93,8 +91,8 @@ Return the name of the created table, which can be used in dashboard creation an
 Args:
     table_name: Import table name
     file_name: Local file name
-    table_structure: Table structure, sample structure: [{"fieldName": "company","displayType": "TEXT"},{"fieldName": "address","displayType": "TEXT"}]
-        fieldName: Column name in the table
+    table_structure: JSON string, sample: [{"displayName": "company","displayType": "TEXT"},{"displayName": "address","displayType": "TEXT"}]
+        displayName: Column name in the table
         displayType supports the following types:
         - TEXT: Text data type
         - REAL: Floating-point number type
@@ -184,16 +182,12 @@ Args:
                 "type": "integer",
                 "description": "(optional) Row position in dashboard grid.",
             },
-            "keyword": {
-                "type": "string",
-                "description": "(optional) Keyword for fuzzy search when listing tables.",
-            },
             "file_name":{
                 "type": "string",
                 "description": "(optional) Local file name.",
             },
             "table_structure":{
-                "type": "object",
+                "type": "string",
                 "description": "(optional) Table structure.",
             }
         },
@@ -219,9 +213,8 @@ Args:
         size_y: Optional[int] = None,
         col: Optional[int] = None,
         row: Optional[int] = None,
-        keyword: Optional[str] = None,
-        file_name: Optional[bool] = None,
-        table_structure: Optional[list[dict]] = None,
+        file_name: Optional[str] = None,
+        table_structure: Optional[str] = None,
     ) -> str:
         """
         Execute Dashmaker operations.
@@ -244,9 +237,8 @@ Args:
             size_y (int, optional): Height of the card in dashboard grid.
             col (int, optional): Column position in dashboard grid.
             row (int, optional): Row position in dashboard grid.
-            keyword (str, optional): Keyword for fuzzy search when listing tables.
             file_name (str, optional): Local file name.
-            table_structure (list[dict], optional): Table structure.
+            table_structure (str, optional): Table structure.
 
         Returns:
             str: Result of the operation.
@@ -291,9 +283,7 @@ Args:
                 )
 
             elif operation == "list_tables":
-                if not table_name:
-                    return "Keyword is required for get_table_info operation"
-                return TrinoDataTableClient().list_tables(keyword)
+                return TrinoDataTableClient().list_tables()
 
             elif operation == "get_table_info":
                 if not table_name:
@@ -307,7 +297,7 @@ Args:
                     return "File name is required for create_dash_table operation"
                 if not table_structure:
                     return "Table structure is required for create_dash_table operation"
-                return await create_dash_table(file_name, table_structure)
+                return await create_dash_table(table_name, file_name, table_structure)
             else:
                 return f"Unknown operation: {operation}"
 
