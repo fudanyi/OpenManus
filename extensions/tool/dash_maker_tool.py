@@ -1,11 +1,12 @@
 from typing import Dict, List, Optional
 from app.tool.base import BaseTool
-from extensions.tool.metabase import metabase_api, execute_query, create_dashboard, create_question, add_question_to_dashboard, add_text_to_dashboard, get_table_info, create_datasource
+from extensions.tool.dash_maker import create_dashboard, create_question, add_question_to_dashboard, add_text_to_dashboard, get_table_info,create_dash_table
+from extensions.tool.datatable_client.trino_client import TrinoDataTableClient
 
-class MetabaseTool(BaseTool):
-    name: str = "metabase"
+class DashmakerTool(BaseTool):
+    name: str = "dashmaker"
     description: str = """
-Interact with Metabase to create and manage dashboards, questions, and data sources. Use this tool to create visualizations, execute queries, and manage Metabase resources.
+Create and manage dashboards, questions, and data sources. Use this tool to create visualizations, execute queries, and manage dashboard resources.
 
 <guidelines>
 - make sure you know the table schema before writing queries
@@ -20,7 +21,7 @@ Create a new dashboard with specified name and description.
 Args:
         question_name: Question name
         sql_query: SQL query
-            - Field names in SQL must be enclosed in double quotes ("). For example: SELECT "field1", "field2" FROM "table"
+            - Field names in SQL must be enclosed in double quotes ("). For example: SELECT "field1", "field2" FROM table
             - Only use SQL syntax and functions supported by Trino (Presto). Do NOT use MySQL-specific or PostgreSQL-specific functions.
         display_type: display type for the visualization
             - table: Table view
@@ -34,10 +35,6 @@ Args:
             - For line/bar/area: {"graph.dimensions": ["column1"], "graph.metrics": ["column2"]}
             - For pie: {"pie.dimension": "column1", "pie.metric": "column2"}
             - For scatter: {"scatter.dimension": "column1", "scatter.metric": "column2"}
-
-    Note:
-        If display_type and visualization_settings are not provided, the system will
-        automatically analyze the query result and determine the best visualization type.
 
 3. add_question_to_dashboard
 Add a question to a dashboard with optional positioning and sizing.
@@ -74,42 +71,48 @@ Args:
         - Dashboard uses a 24-column grid layout
         - For headings, it's recommended to use full width (size_x=24)
 
-5. execute_query
-Execute SQL query and return the result data.
-- Returns query results with data, columns, row count, and column count
-- Handles errors gracefully with detailed error messages
+5. list_tables
+Get a list of all available tables.
+Returns:
+    list: A list of all tables.
 
 6. get_table_info
 Get table structure and sample data.
 - Returns detailed column information including names, types, and max lengths
 - Includes sample data (first 10 rows) for quick data preview
 
-7. create_datasource
-Create a new database connection in Metabase.
+7. create_dash_table
+Import CSV data into database and create a new table
+
+This function takes a CSV file and table structure definition, and creates a new table in database. 
+The imported data will be used for data visualization and analysis in dashboards.
+Return the name of the created table, which can be used in dashboard creation and query operations to visualize the imported data
+
 Args:
-        name: Database name in Metabase
-        engine: Database type ("mysql" or "postgres")
-        host: Database host
-        port: Database port
-        dbname: Database name
-        user: Database username
-        password: Database password
-        ssl: Whether to use SSL connection (default: False)
+    table_name: Import table name
+    file_name: Local file name
+    table_structure: JSON string, sample: [{"displayName": "company","displayType": "TEXT"},{"displayName": "address","displayType": "TEXT"}]
+        displayName: Column name in the table
+        displayType supports the following types:
+        - TEXT: Text data type
+        - REAL: Floating-point number type
+        - INTEGER: Integer number type
+        - DATETIME: Date and time type
 """
     parameters: dict = {
         "type": "object",
         "properties": {
             "operation": {
                 "type": "string",
-                "description": "(required) The operation to perform on Metabase.",
+                "description": "(required) The operation to perform on Dashmaker.",
                 "enum": [
                     "create_dashboard",
                     "create_question",
                     "add_question_to_dashboard",
                     "add_text_to_dashboard",
-                    "execute_query",
+                    "list_table",
                     "get_table_info",
-                    "create_datasource"
+                    "create_dash_table",
                 ],
             },
             "dashboard_name": {
@@ -179,39 +182,14 @@ Args:
                 "type": "integer",
                 "description": "(optional) Row position in dashboard grid.",
             },
-            "name": {
+            "file_name":{
                 "type": "string",
-                "description": "(optional) Name for the data source.",
+                "description": "(optional) Local file name.",
             },
-            "engine": {
+            "table_structure":{
                 "type": "string",
-                "description": "(optional) Database type ('mysql' or 'postgres').",
-                "enum": ["mysql", "postgres"],
-            },
-            "host": {
-                "type": "string",
-                "description": "(optional) Database host.",
-            },
-            "port": {
-                "type": "integer",
-                "description": "(optional) Database port.",
-            },
-            "dbname": {
-                "type": "string",
-                "description": "(optional) Database name.",
-            },
-            "user": {
-                "type": "string",
-                "description": "(optional) Database username.",
-            },
-            "password": {
-                "type": "string",
-                "description": "(optional) Database password.",
-            },
-            "ssl": {
-                "type": "boolean",
-                "description": "(optional) Whether to use SSL connection.",
-            },
+                "description": "(optional) Table structure.",
+            }
         },
         "required": ["operation"],
     }
@@ -235,20 +213,14 @@ Args:
         size_y: Optional[int] = None,
         col: Optional[int] = None,
         row: Optional[int] = None,
-        name: Optional[str] = None,
-        engine: Optional[str] = None,
-        host: Optional[str] = None,
-        port: Optional[int] = None,
-        dbname: Optional[str] = None,
-        user: Optional[str] = None,
-        password: Optional[str] = None,
-        ssl: Optional[bool] = False,
+        file_name: Optional[str] = None,
+        table_structure: Optional[str] = None,
     ) -> str:
         """
-        Execute Metabase operations.
+        Execute Dashmaker operations.
 
         Args:
-            operation (str): The operation to perform on Metabase.
+            operation (str): The operation to perform on Dashmaker.
             dashboard_name (str, optional): Name of the dashboard to create.
             description (str, optional): Description for the dashboard or question.
             question_name (str, optional): Name of the question to create.
@@ -265,14 +237,8 @@ Args:
             size_y (int, optional): Height of the card in dashboard grid.
             col (int, optional): Column position in dashboard grid.
             row (int, optional): Row position in dashboard grid.
-            name (str, optional): Name for the data source.
-            engine (str, optional): Database type ('mysql' or 'postgres').
-            host (str, optional): Database host.
-            port (int, optional): Database port.
-            dbname (str, optional): Database name.
-            user (str, optional): Database username.
-            password (str, optional): Database password.
-            ssl (bool, optional): Whether to use SSL connection.
+            file_name (str, optional): Local file name.
+            table_structure (str, optional): Table structure.
 
         Returns:
             str: Result of the operation.
@@ -286,6 +252,8 @@ Args:
             elif operation == "create_question":
                 if not question_name or not sql_query:
                     return "Question name and SQL query are required for create_question operation"
+                if not display_type or not visualization_settings:
+                    return "Display Type and visualization Settings are required for create_question operation"
                 return await create_question(question_name, sql_query, display_type, visualization_settings)
 
             elif operation == "add_question_to_dashboard":
@@ -314,30 +282,22 @@ Args:
                     row=row
                 )
 
-            elif operation == "execute_query":
-                if not sql_query:
-                    return "SQL query is required for execute_query operation"
-                return await execute_query(sql_query)
+            elif operation == "list_tables":
+                return TrinoDataTableClient().list_tables()
 
             elif operation == "get_table_info":
                 if not table_name:
                     return "Table name is required for get_table_info operation"
                 return await get_table_info(table_name)
 
-            elif operation == "create_datasource":
-                if not all([name, engine, host, port, dbname, user, password]):
-                    return "All database connection details are required for create_datasource operation"
-                return await create_datasource(
-                    name=name,
-                    engine=engine,
-                    host=host,
-                    port=port,
-                    dbname=dbname,
-                    user=user,
-                    password=password,
-                    ssl=ssl
-                )
-
+            elif operation == "create_dash_table":
+                if not table_name:
+                    return "Table name is required for create_dash_table operation"
+                if not file_name:
+                    return "File name is required for create_dash_table operation"
+                if not table_structure:
+                    return "Table structure is required for create_dash_table operation"
+                return await create_dash_table(table_name, file_name, table_structure)
             else:
                 return f"Unknown operation: {operation}"
 
