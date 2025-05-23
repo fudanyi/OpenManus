@@ -71,27 +71,29 @@ def load_flow_from_session(
                     for session_message in session.get("memory", [])
                 ]
             )
-            for agent_key, agent in flow.agents.items():
-                if agent_key in session:
-                    session_agent = session[agent_key]
-                    agent.current_step = session_agent.get("current_step")
-                    agent.state = session_agent.get("state")
-                    if flow.memory:
-                        agent.memory = flow.memory
-                    else:
-                        agent.memory.add_messages(
-                            [
-                                Message(
-                                    role=session_message.get("role"),
-                                    content=session_message.get("content"),
-                                    tool_calls=session_message.get("tool_calls"),
-                                    name=session_message.get("name"),
-                                    tool_call_id=session_message.get("tool_call_id"),
-                                    base64_image=session_message.get("base64_image"),
-                                )
-                                for session_message in session_agent.get("messages", [])
-                            ]
-                        )
+
+            # remove agent messages as currently flow memory is shared across all agents
+            # for agent_key, agent in flow.agents.items():
+            #     if agent_key in session:
+            #         session_agent = session[agent_key]
+            #         agent.current_step = session_agent.get("current_step")
+            #         agent.state = session_agent.get("state")
+            #         if flow.memory:
+            #             agent.memory = flow.memory
+            #         else:
+            #             agent.memory.add_messages(
+            #                 [
+            #                     Message(
+            #                         role=session_message.get("role"),
+            #                         content=session_message.get("content"),
+            #                         tool_calls=session_message.get("tool_calls"),
+            #                         name=session_message.get("name"),
+            #                         tool_call_id=session_message.get("tool_call_id"),
+            #                         base64_image=session_message.get("base64_image"),
+            #                     )
+            #                     for session_message in session_agent.get("messages", [])
+            #                 ]
+            #             )
 
             if not flow.memory:
                 flow.memory = flow.agents[list(flow.agents.keys())[0]].memory
