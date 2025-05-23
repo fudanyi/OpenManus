@@ -165,12 +165,14 @@ class Message(BaseModel):
 
 
 class Memory(BaseModel):
+    all_messages: List[Message] = Field(default_factory=list)
     messages: List[Message] = Field(default_factory=list)
     max_messages: int = Field(default=100)
 
     def add_message(self, message: Message) -> None:
         """Add a message to memory"""
         self.messages.append(message)
+        self.all_messages.append(message.model_copy())
         # Optional: Implement message limit
         if len(self.messages) > self.max_messages:
             self.messages = self.messages[-self.max_messages :]
@@ -178,7 +180,7 @@ class Memory(BaseModel):
     def add_messages(self, messages: List[Message]) -> None:
         """Add multiple messages to memory"""
         self.messages.extend(messages)
-
+        self.all_messages.extend(messages.model_copy())
     def clear(self) -> None:
         """Clear all messages"""
         self.messages.clear()

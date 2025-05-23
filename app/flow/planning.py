@@ -1,3 +1,4 @@
+import ast
 import json
 import time
 import traceback
@@ -498,9 +499,52 @@ class PlanningFlow(BaseFlow):
             # Get the summary content, handling both string and object responses
             summary_content = response.content if hasattr(response, 'content') else str(response)
 
+
+            # 获取成功的python/querydata工具调用结果
+            real_results = []
+            for i, msg in enumerate(self.memory.all_messages):
+                if msg.role == "tool":
+                    if msg.name == "python_execute":
+                        try:
+                            # 去掉前缀
+                            prefix = "Observed output of cmd `python_execute` executed:\n"
+                            json_like_str = msg.content[len(prefix):]
+
+                            # 使用 ast.literal_eval 安全解析成字典
+                            result = ast.literal_eval(json_like_str)
+
+                            if result.get("success") == True and (len(result.get("output_files")) >0 or len(result.get("charts")) >0):
+                                # Get the previous message
+                                prev_msg = self.memory.all_messages[i-1]
+                                real_results.append((prev_msg, msg))
+                        except:
+                            continue
+                    elif msg.name == "datasource":
+                        try:
+                            # 去掉前缀
+                            prefix = "Observed output of cmd `datasource` executed:\n"
+                            json_like_str = msg.content[len(prefix):]
+
+                            # 使用 ast.literal_eval 安全解析成字典
+                            result = ast.literal_eval(json_like_str)
+
+                            if result.get("error") == False and result.get("data").get("csv_filename"):
+                                prev_msg = self.memory.all_messages[i-1]
+                                real_results.append((prev_msg, msg))
+                        except:
+                            continue
+
+            logger.info(f"real_results: {real_results.__len__()}")
+
+            # Convert real_results tuples to Message objects
+            real_result_messages = []
+            for prev_msg, tool_msg in real_results:
+                real_result_messages.extend([prev_msg, tool_msg])
+
             # Reset memory to only contain original request and summary
             self.memory.messages = [
                 original_request,
+                *real_result_messages,  # Now contains Message objects instead of tuples
                 *[msg for msg in self.memory.messages if msg.type == "summary"],
                 Message.summary_message("Summary of previous partial execution: \n" +"=============\n"+ summary_content+"\n=============\n")
             ]
@@ -515,7 +559,7 @@ class PlanningFlow(BaseFlow):
                 "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts. "
             )
 
-            self.memory.messages.append(
+            self.memory.add_message(
                 Message.user_message(
                     "Please summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts"
                     "Then always use result_reporter tool to report deliverables. But DONOT mention the tool in your summary."

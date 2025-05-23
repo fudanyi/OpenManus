@@ -113,13 +113,16 @@ def save_flow_to_session(session_id: str, flow: PlanningFlow):
             "current_step_index": flow.current_step_index,
             "plans": flow.planning_tool.plans,
             "memory": flow.memory.to_dict_list(),
+            "all_messages": [msg.to_dict() for msg in flow.memory.all_messages]
         }
-        for agent_key, agent in flow.agents.items():
-            session[agent_key] = {
-                "current_step": agent.current_step,
-                "state": agent.state,
-                "messages": agent.memory.to_dict_list(),
-            }
+
+        # remove agent messages as currently flow memory is shared across all agents
+        # for agent_key, agent in flow.agents.items():
+        #     session[agent_key] = {
+        #         "current_step": agent.current_step,
+        #         "state": agent.state,
+        #         "messages": agent.memory.to_dict_list(),
+        #     }
 
         session_path = get_session_path(session_id)
         with open(session_path, "w", encoding="utf-8") as f:
