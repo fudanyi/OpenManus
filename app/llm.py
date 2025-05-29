@@ -934,7 +934,7 @@ class LLM:
         messages: List[Message],
         tools: List[Dict],
         images: Union[str, List[str], List[Dict]],
-        tool_choice: TOOL_CHOICE_TYPE = ToolChoice.AUTO,
+        tool_choice: TOOL_CHOICE_TYPE = ToolChoice.AUTO, # type: ignore
         system_msgs: Optional[List[Message]] = None,
         temperature: Optional[float] = None,
         timeout: Optional[int] = None,

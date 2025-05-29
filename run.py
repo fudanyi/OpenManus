@@ -5,6 +5,7 @@ import time
 from app.config import WORKSPACE_ROOT
 from app.flow.flow_factory import FlowFactory, FlowType
 from app.logger import logger
+from extensions.agent.dash_maker import DashMaker
 from extensions.agent.data_analyst import DataAnalyst
 from extensions.agent.planner import Planner
 from extensions.agent.report_maker import ReportMaker
@@ -25,6 +26,7 @@ async def run_flow(session_id: str):
     agents = {
         "dataAnalyst": DataAnalyst(),
         "reportMaker": ReportMaker(),
+        "dashMaker": DashMaker(),
         "answerbot": AnswerBot(),
     }
 

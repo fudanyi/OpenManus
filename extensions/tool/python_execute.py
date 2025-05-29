@@ -7,7 +7,7 @@ class PythonExecute(PythonExecute):
 
     name: str = "python_execute"
     description: str = (
-        "Executes Python code string in data analysis task, save data table in csv file. Note: Only print outputs are visible, function return values are not captured. Use print statements to see results.\n"
+        "Executes Python code string. Note: Only print outputs are visible, function return values are not captured. Use print statements to see results.\n"
         + table.PROMPT
         + "\n"
         + chart.PROMPT

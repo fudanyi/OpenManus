@@ -14,21 +14,22 @@ from app.tool.str_replace_editor import StrReplaceEditor
 
 # from app.tool.terminal import Terminal
 from app.tool.web_search import WebSearch
-from extensions.prompt.report_maker import NEXT_STEP_PROMPT, SYSTEM_PROMPT
+from extensions.prompt.dash_maker import NEXT_STEP_PROMPT, SYSTEM_PROMPT
 from extensions.tool.human_input import HumanInput
+from extensions.tool.dash_maker_tool import DashmakerTool
 
 
-class ReportMaker(ToolCallAgent):
+class DashMaker(ToolCallAgent):
     """
-    A report maker agent that uses planning to solve various report making tasks.
+    A report maker agent that uses planning to solve various dashboard making tasks.
 
     This agent extends ToolCallAgent with a comprehensive set of tools and capabilities,
     including Python execution, web search, chart visualization.
     """
 
-    name: str = "ReportMaker"
+    name: str = "DashMaker"
     description: str = (
-        "An report maker agent that utilizes multiple tools to solve diverse report making tasks"
+        "An dashboard maker agent that utilizes multiple tools to solve diverse report making tasks"
     )
 
     system_prompt: str = SYSTEM_PROMPT.format(current_date=datetime.datetime.now().strftime("%Y-%m-%d"))
@@ -46,6 +47,7 @@ class ReportMaker(ToolCallAgent):
             StrReplaceEditor(),
             FileSaver(),
             Bash(),
+            DashmakerTool(),
         )
     )
 

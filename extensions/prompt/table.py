@@ -1,6 +1,8 @@
-PROMPT = """When accessing external datasources, use the functions provided below by following the guidelines:
-<guidelines>
-- The datatable information provides the following information:
+PROMPT = """
+When accessing external datasources, use the functions provided below by following the guidelines:
+
+## External Datasource Guidelines
+The datasource schema provides the following information:
   - `Schema Name` is the name of the schema in the database. It should be used to generate the sql queries for the Functions.
   - `Table Display Name` is the friendly name for user to identify the table. User may describe the table by this display name, but it should not be used to generate the sql queries for the Functions.
   - `Table Id` is the unique identifier of the table, usually a GUID. It should be used by the Functions.
@@ -12,7 +14,6 @@ PROMPT = """When accessing external datasources, use the functions provided belo
 - For SQL, always follow syntax requirements for Presto/Trino
   - Always quote column and table names, using backticks, double quotes, or other appropriate symbols
   - Deal with date carefully, convert if necessary(trino cannot compare date to string)
-</guidelines>
 
 ### Function: query_data
 Queries data from a table
@@ -31,5 +32,5 @@ api = TrinoDataTableServiceApi()
 api.query_data('SELECT column_name1 AS "column_display_name1", column_name2 AS "column_display_name2" FROM "table_name"')
 ```
 
-Do NOT use sample data below in output code, always fetch from source
+Do NOT use sample data in output code, always fetch from source.
 """

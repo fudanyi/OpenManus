@@ -21,7 +21,6 @@ from extensions.prompt.planner import (
     SYSTEM_PROMPT as PLANNER_SYSTEM_PROMPT,
 )
 from extensions.tool.data_source import DataSource
-from extensions.tool.final_result import FinalResult
 from extensions.tool.human_input import HumanInput
 
 # from app.tool.planning import PlanningTool
@@ -59,13 +58,13 @@ class Planner(ToolCallAgent):
 
     async def think(self) -> bool:
         """Process current state and decide next actions with appropriate context."""
-        # Store original prompt
-        original_prompt = self.next_step_prompt
+        # # Store original prompt
+        # original_prompt = self.next_step_prompt
 
         # Call parent's think method
         result = await super().think()
 
-        # Restore original prompt
-        self.next_step_prompt = original_prompt
+        # # Restore original prompt
+        # self.next_step_prompt = original_prompt
 
         return result

@@ -157,7 +157,7 @@ def get_user_input(input_prompt: str):
         logger.error(f"Invalid input: {str(e)}")
         prompt = str(input_json)  # 确保prompt是字符串
         attachments = []
-        prompt_with_attachments = prompt
+        prompt_with_attachments = "# User Task: \n" + prompt + "\n"
 
     if attachments:
         for attachment in attachments:
@@ -169,7 +169,7 @@ def get_user_input(input_prompt: str):
 
     if attachments_content:
         prompt_with_attachments += (
-            "\n以下是数据文件路径及数据内容的头部预览。预览内容仅供参考，进行分析时请先读取文件实际内容：\n"
+            "\n# 用户文件\n以下是数据文件路径及数据内容的头部预览。预览内容仅供参考，进行分析时请先读取文件实际内容：\n"
         )
         prompt_with_attachments += attachments_content
         logger.info(f"prompt_with_attachments: {prompt_with_attachments}")

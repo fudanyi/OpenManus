@@ -14,7 +14,7 @@ sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../w
 class DataSource(BaseTool):
     name: str = "datasource"
     description: str = """
-Interact with external datasources. Use this tool to list all tables, retrieve schemas and query tables using SQL.
+Interact with external datasources only. All managed external datasources are repesented here as a table. Use this tool to list all tables, retrieve schemas and query tables using SQL. 
 """
     parameters: dict = {
         "type": "object",

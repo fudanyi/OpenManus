@@ -8,12 +8,10 @@ class DashmakerTool(BaseTool):
     description: str = """
 Create and manage dashboards, questions, and data sources. Use this tool to create visualizations, execute queries, and manage dashboard resources.
 
-<guidelines>
+## Dash Generation Guidelines
 - make sure you know the table schema before writing queries
-</guidelines>
 
-Available operations:
-
+### Available operations
 1. create_dashboard
 Create a new dashboard with specified name and description.
 
@@ -83,10 +81,9 @@ Get table structure and sample data.
 
 7. create_dash_table
 Import CSV data into database and create a new table
-
-This function takes a CSV file and table structure definition, and creates a new table in database. 
-The imported data will be used for data visualization and analysis in dashboards.
-Return the name of the created table, which can be used in dashboard creation and query operations to visualize the imported data
+- This function takes a CSV file and table structure definition, and creates a new table in database. 
+- The imported data will be used for data visualization and analysis in dashboards.
+- Return the name of the created table, which can be used in dashboard creation and query operations to visualize the imported data
 
 Args:
     table_name: Import table name
@@ -98,6 +95,7 @@ Args:
         - REAL: Floating-point number type
         - INTEGER: Integer number type
         - DATETIME: Date and time type
+
 """
     parameters: dict = {
         "type": "object",

@@ -39,7 +39,7 @@ class PlanningTool(BaseTool):
                 "type": "string",
             },
             "title": {
-                "description": "Title for the plan. Required for create command, optional for update command.",
+                "description": "Short description of user's goal. Required for create command, optional for update command.",
                 "type": "string",
             },
             "sections": {

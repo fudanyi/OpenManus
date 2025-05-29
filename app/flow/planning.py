@@ -19,6 +19,13 @@ from extensions.output import Output
 from extensions.tool.human_input import HumanInput
 from extensions.tool.result_reporter import ResultReporter
 from app.config import config
+from app.prompt.flow_prompt import (
+    STEP_EXECUTION_PROMPT,
+    SUMMARY_REQUEST_PROMPT,
+    FINALIZE_REQUEST_PROMPT,
+    SUMMARY_SYSTEM_MESSAGE,
+    FINALIZE_SYSTEM_MESSAGE,
+)
 
 class PlanStepStatus(str, Enum):
     """Enum class defining possible statuses of a plan step"""
@@ -333,15 +340,11 @@ class PlanningFlow(BaseFlow):
         step_text = step_info.get("step")
 
         # Create a prompt for the agent to execute the current step
-        step_prompt = f"""
-        CURRENT PLAN STATUS:
-        {plan_status}
-
-        YOUR CURRENT TASK:
-        You are now working on step {self.current_step_index}: "{step_text}"
-
-        Please execute this step using the appropriate tools. When you're done, provide a summary of what you accomplished.
-        """
+        step_prompt = STEP_EXECUTION_PROMPT.format(
+            plan_status=plan_status,
+            step_index=self.current_step_index,
+            step_text=step_text
+        )
 
         # Use agent.run() to execute the step
         try:
@@ -459,20 +462,14 @@ class PlanningFlow(BaseFlow):
     async def _summarize_messages(self) -> None:
         """Summarize all messages in memory and reset memory to only contain original request and summary."""
         try:
-            system_message = Message.system_message(
-                "You are a information extraction assistant."
-            )
+            system_message = Message.system_message(SUMMARY_SYSTEM_MESSAGE)
 
             # Get all current messages
             user_messages = self.memory.messages.copy()
             
             # Add request for summary
             user_messages.append(
-                Message.user_message(
-                "Your task is to summarize previous conversation(representing partial execution of an agent) into a comprehensive document that captures the insights, any fact details, any important information fetched,  any deliverables produced and any recommendation to avoid errors."
-                "The document must contain enough and correct details for subsequent execution to complete user goal without duplicate refetching/redoing， especially schema details."
-                "Assume subsequent execution only has access to this summary."
-                )
+                Message.user_message(SUMMARY_REQUEST_PROMPT)
             )
 
             # Get summary from LLM
@@ -555,15 +552,10 @@ class PlanningFlow(BaseFlow):
     async def _finalize_plan(self) -> str:
         """Finalize the plan and provide a summary using the flow's LLM directly."""
         try:
-            system_message = Message.system_message(
-                "You are a summarize assistant. Your task is to summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts. "
-            )
+            system_message = Message.system_message(FINALIZE_SYSTEM_MESSAGE)
 
             self.memory.add_message(
-                Message.user_message(
-                    "Please summarize previous messages into a concise summary including deliverables, valuable insights, potential next steps and any final thoughts"
-                    "Then always use result_reporter tool to report deliverables. But DONOT mention the tool in your summary."
-                )
+                Message.user_message(FINALIZE_REQUEST_PROMPT)
             )
             user_messages = self.memory.messages
 
